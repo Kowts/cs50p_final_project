@@ -366,11 +366,11 @@ def main():
     else:
         print("Users already exist in the database.")
 
-    main_window = MainWindow(task_manager) # Create the main window instance first
-    login_dialog = LoginDialog(task_manager) # Pass main_window to LoginDialog
+    login_dialog = LoginDialog(task_manager)  # Create the login dialog instance first
 
     if login_dialog.exec() == QDialog.DialogCode.Accepted:
         # Show the main window only if login is successful
+        main_window = MainWindow(task_manager)  # Create the main window instance
         main_window.show()
         sys.exit(app.exec())
     else:
