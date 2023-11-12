@@ -5,6 +5,7 @@ import hashlib
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtWidgets import QMessageBox
 from dotenv import load_dotenv
+from plyer import notification
 import logging
 
 # Load environment variables from a .env file.
@@ -12,7 +13,7 @@ load_dotenv()
 
 # Function to set up the logging configuration.
 # Allows specification of the log level and the filename for the log file.
-def setup_logging(level=logging.INFO, filename='app.log'):
+def setup_logging(level=logging.DEBUG, filename='app.log'):
     logging.basicConfig(level=level, filename=filename, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Function to establish a database connection.
@@ -88,3 +89,29 @@ def show_message(title, message):
     msg.setWindowTitle(title)
     msg.setText(message)
     msg.exec()
+
+# Send a Windows notification asynchronously and log the action.
+def send_windows_notification(title: str, message: str, timeout: int = 10, app_name: str = 'YourApp') -> bool:
+    """
+    Args:
+        title (str): The title of the notification.
+        message (str): The message content of the notification.
+        timeout (int): The time in seconds for the notification to disappear (default is 10 seconds).
+        app_name (str): The name of your application (default is 'YourApp').
+
+    Returns:
+        bool: True if the notification was sent successfully, False otherwise.
+    """
+    try:
+        notification.notify(
+            title=title,
+            message=message,
+            app_name=app_name,
+            timeout=timeout
+        )
+        logging.info(f"Sent Windows notification: Title='{title}', Message='{message}', Timeout={timeout}, App Name='{app_name}'")
+        return True
+    except Exception as e:
+        logging.error(f"Error sending Windows notification: {str(e)}")
+        return False
+
