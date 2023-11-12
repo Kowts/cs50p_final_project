@@ -1,38 +1,72 @@
 import os
-import sqlite3
-import hashlib
+import sqlite3, utils
 from PyQt6.QtCore import QDateTime
-from PyQt6.QtWidgets import QMessageBox
+from dotenv import load_dotenv
+from enum import Enum
 
+# load environment variables from .env file
+load_dotenv()
+
+# Constants
+DATABASE_FILE = utils.get_env_variable('DATABASE_FILE')
+DEFAULT_PRIORITIES = utils.get_env_variable('DEFAULT_PRIORITIES').split(',')
+DEFAULT_CATEGORIES = utils.get_env_variable('DEFAULT_CATEGORIES').split(',')
+
+class UserStatus(Enum):
+    ACTIVE = 1
+    INACTIVE = 0
 class TaskManager:
-    def __init__(self, db_file='database.db'):
-        self.conn = sqlite3.connect(db_file)
-        self.cursor = self.conn.cursor()
-        self.create_table()
 
-    def hash_password(self, password, salt=None):
-        if salt is None:
-            # Generate a random salt
-            salt = hashlib.sha256(os.urandom(32)).hexdigest()
+    """
+    A class to manage tasks and user authentication.
+    """
 
-        # Encode the password to bytes
-        password_bytes = password.encode('utf-8')
+    def __init__(self, db_file=DATABASE_FILE):
+        self.db_file = db_file
+        self.validate_environment_variables()
+        self.setup_database()
 
-        # Encode the salt to bytes
-        salt_bytes = salt.encode('utf-8')
-        print(f"salt: {salt}")
-        print(f"salt_bytes: {salt_bytes}")
+    def validate_environment_variables(self):
+        required_vars = ['DATABASE_FILE', 'MAX_CONNECTION', 'DEFAULT_USER', 'DEFAULT_PASSWORD']
+        missing_vars = [var for var in required_vars if not utils.get_env_variable(var)]
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
-        # Combine the password and salt
-        password_salt = password_bytes + salt_bytes
+        if not os.path.exists(self.db_file):
+            raise ValueError(f"The specified database file {self.db_file} does not exist.")
 
-        # Create a SHA-256 hash of the password + salt
-        hashed_password = hashlib.sha256(password_salt).hexdigest()
+        max_connection = utils.get_env_variable('MAX_CONNECTION')
+        if max_connection and not max_connection.isdigit():
+            raise ValueError("MAX_CONNECTION must be a numeric value.")
 
-        return hashed_password
+        if max_connection and not 1 <= int(max_connection) <= 100:
+            raise ValueError("MAX_CONNECTION must be between 1 and 100.")
 
-    def create_table(self):
-        self.cursor.execute('''
+        admin_email = utils.get_env_variable('ADMIN_EMAIL')
+        if admin_email and not utils.is_valid_email(admin_email):
+            raise ValueError("Invalid email format for ADMIN_EMAIL.")
+
+    def setup_database(self):
+        """
+        Sets up the database and creates necessary tables.
+        """
+        try:
+            with utils.get_db_connection(self.db_file) as conn:
+                self.create_tasks_table(conn)
+                self.create_priorities_table(conn)
+                self.create_categories_table(conn)
+                self.create_users_table(conn)
+        except sqlite3.DatabaseError as e:
+            utils.logging.error(f"Database error: {e}")
+        except Exception as e:
+            utils.logging.error(f"An error occurred: {e}")
+
+
+    def create_tasks_table(self, conn):
+        """
+        Creates the tasks table in the database.
+        """
+        conn.execute('''
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -43,25 +77,36 @@ class TaskManager:
                 status INTEGER
             )
         ''')
-        self.conn.commit()
 
-        # Create priorities and categories tables if they don't exist
-        self.cursor.execute('''
+    def create_priorities_table(self, conn):
+        """
+        Creates the priorities table and populates default values.
+        """
+        conn.execute('''
             CREATE TABLE IF NOT EXISTS priorities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL
             )
         ''')
-        self.cursor.execute('''
+        self.insert_default_priorities(conn)
+
+    def create_categories_table(self, conn):
+        """
+        Creates the categories table and populates default values.
+        """
+        conn.execute('''
             CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL
             )
         ''')
-        self.conn.commit()
+        self.insert_default_categories(conn)
 
-        # Create a table for user credentials
-        self.cursor.execute('''
+    def create_users_table(self, conn):
+        """
+        Creates the users table in the database.
+        """
+        conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
@@ -71,156 +116,173 @@ class TaskManager:
                 status INTEGER
             )
         ''')
-        self.conn.commit()
 
-        # Insert default priorities and categories if they don't exist
-        self.insert_default_priorities()
-        self.insert_default_categories()
-
-    def insert_default_priorities(self):
-        # Check if there are any priorities in the table
-        self.cursor.execute('SELECT COUNT(*) FROM priorities')
-        count = self.cursor.fetchone()[0]
+    def insert_default_priorities(self, conn):
+        """
+        Inserts default priorities if they don't exist.
+        """
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM priorities')
+        count = cursor.fetchone()[0]
 
         if count == 0:
-            # Insert default priorities
-            default_priorities = ["Low", "Medium", "High"]
-            for priority in default_priorities:
-                self.cursor.execute("INSERT INTO priorities (name) VALUES (?)", (priority,))
-            self.conn.commit()
+            for priority in DEFAULT_PRIORITIES:
+                cursor.execute("INSERT INTO priorities (name) VALUES (?)", (priority,))
 
-    def insert_default_categories(self):
-        # Check if there are any categories in the table
-        self.cursor.execute('SELECT COUNT(*) FROM categories')
-        count = self.cursor.fetchone()[0]
+    def insert_default_categories(self, conn):
+        """
+        Inserts default categories if they don't exist.
+        """
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM categories')
+        count = cursor.fetchone()[0]
 
         if count == 0:
-            # Insert default categories
-            default_categories = ["Work", "Personal", "Shopping", "Other"]
-            for category in default_categories:
-                self.cursor.execute("INSERT INTO categories (name) VALUES (?)", (category,))
-            self.conn.commit()
+            for category in DEFAULT_CATEGORIES:
+                cursor.execute("INSERT INTO categories (name) VALUES (?)", (category,))
 
     def load_priorities(self):
         try:
-            self.cursor.execute('SELECT name FROM priorities')
-            priorities = [row[0] for row in self.cursor.fetchall()]
-            return priorities
-        except sqlite3.Error as e:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT name FROM priorities')
+                priorities = [row[0] for row in cursor.fetchall()]
+                return priorities
+        except sqlite3.DatabaseError as e:
+            # Handle specific database-related errors
+            utils.logging.error(f"Database error: {e}")
+            # Consider logging this error and returning an appropriate response
+            return []
+        except Exception as e:
+            # Handle other, more general exceptions
+            utils.logging.error(f"An error occurred: {e}")
+            # Again, consider logging and how you want to handle this in the UI
             return []
 
     def load_categories(self):
         try:
-            self.cursor.execute('SELECT name FROM categories')
-            categories = [row[0] for row in self.cursor.fetchall()]
-            return categories
-        except sqlite3.Error as e:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT name FROM categories')
+                categories = [row[0] for row in cursor.fetchall()]
+                return categories
+        except sqlite3.DatabaseError as e:
+            # Handle specific database-related errors
+            utils.logging.error(f"Database error: {e}")
+            # Consider logging this error and returning an appropriate response
+            return []
+        except Exception as e:
+            # Handle other, more general exceptions
+            utils.logging.error(f"An error occurred: {e}")
+            # Again, consider logging and how you want to handle this in the UI
             return []
 
     def get_existing_users(self):
         try:
-            self.cursor.execute('SELECT username FROM users')
-            users = [row[0] for row in self.cursor.fetchall()]
-            return users
-        except sqlite3.Error as e:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT username FROM users')
+                users = [row[0] for row in cursor.fetchall()]
+                return users
+        except sqlite3.DatabaseError as e:
+            # Handle specific database-related errors
+            utils.logging.error(f"Database error: {e}")
+            # Consider logging this error and returning an appropriate response
+            return []
+        except Exception as e:
+            # Handle other, more general exceptions
+            utils.logging.error(f"An error occurred: {e}")
+            # Again, consider logging and how you want to handle this in the UI
             return []
 
     def create_user(self, username, password):
+        if not utils.is_valid_username(username) or not utils.is_valid_password(password):
+            raise ValueError("Invalid username or password")
+
         try:
-            # Generate a unique salt for the user
-            salt = hashlib.sha256(os.urandom(32)).hexdigest()
+            with utils.get_db_connection(self.db_file) as conn:
+                cursor = conn.cursor()
+                hashed_password, salt = utils.hash_password(password)
+                created_at = utils.format_datetime(QDateTime.currentDateTime())
+                user_status = UserStatus.ACTIVE.value
 
-            # Hash the password with the salt
-            hashed_password = self.hash_password(password, salt)
-
-            # Get the current timestamp
-            created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-
-            # Set the default user status to 1 (active)
-            user_status = 1
-
-            # Store the username, hashed password, salt, created_at timestamp, and status in the database
-            self.cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)",
-                                (username, hashed_password, salt, created_at, user_status))
-            self.conn.commit()
-
-            return None  # No error message
-        except sqlite3.Error as e:
-            return str(e)  # Return the error message
-
-    def verify_user(self, username, password):
-        try:
-            self.cursor.execute("SELECT password, salt FROM users WHERE username = ?", (username,))
-            stored_data = self.cursor.fetchone()
-
-            if stored_data:
-                stored_hashed_password, salt = stored_data
-                hashed_password = self.hash_password(password, salt)
-
-                if stored_hashed_password == hashed_password:
-                    return True  # Password is correct
-            return False  # Password is incorrect or user not found
-
-        except sqlite3.Error as e:
-            print(f"Database error: {e}")
-            return False  # Error or user not found
-
-
-    def add_task(self, task_name, due_date, priority, category):
-        try:
-            # Use the current timestamp for the "created_at" field
-            created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-
-            # Add the task to the database
-            self.cursor.execute(
-                "INSERT INTO tasks (name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
-                (task_name, due_date, priority, category, created_at, 1)  # Set status to 1 for active
-            )
-            self.conn.commit()
-
-            # Retrieve the ID of the last inserted task
-            task_id = self.cursor.lastrowid
-
-            return None, task_id  # No error message, return the task ID
-
-        except Exception as e:
-            return str(e), None  # Return the error message and None for task ID if an exception occurs
-
-    def list_tasks(self, status=None):
-        if status is None:
-            self.cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = 1')
-        else:
-            self.cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?', (status,))
-        return self.cursor.fetchall()
-
-    def remove_task(self, task_id):
-        try:
-            self.cursor.execute('UPDATE tasks SET status = 0 WHERE id = ?', (task_id,))
-            self.conn.commit()
-            return None  # No error message
+                cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)",
+                            (username, hashed_password, salt, created_at, user_status))
+            return None
         except sqlite3.Error as e:
             return str(e)
 
-    def close_database(self):
-        self.conn.close()
+    def verify_user(self, username, password):
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT password, salt FROM users WHERE username = ?", (username,))
+                stored_data = cursor.fetchone()
+
+                if stored_data:
+                    stored_hashed_password, salt = stored_data
+                    hashed_password, _ = utils.hash_password(password, salt)
+
+                    if stored_hashed_password == hashed_password:
+                        return True
+                return False
+
+        except sqlite3.Error:
+            return False
+
+    def add_task(self, task_name, due_date, priority, category):
+        if not utils.is_valid_task_name(task_name):
+            raise ValueError("Invalid task name.")
+
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                cursor.execute(
+                    "INSERT INTO tasks (name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
+                    (task_name, due_date, priority, category, created_at, UserStatus.ACTIVE.value)
+                )
+                task_id = cursor.lastrowid
+            return None, task_id
+        except sqlite3.Error as e:
+            return str(e), None
+
+    def list_tasks(self, status=None):
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                if status is None:
+                    cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?', (UserStatus.ACTIVE.value,))
+                else:
+                    cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?', (status,))
+                return cursor.fetchall()
+        except sqlite3.DatabaseError as e:
+            # Handle specific database-related errors
+            utils.logging.error(f"Database error: {e}")
+            # Consider logging this error and returning an appropriate response
+            return []
+        except Exception as e:
+            # Handle other, more general exceptions
+            utils.logging.error(f"An error occurred: {e}")
+            # Again, consider logging and how you want to handle this in the UI
+            return []
+
+    def remove_task(self, task_id):
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('UPDATE tasks SET status = ? WHERE id = ?', (UserStatus.INACTIVE.value, task_id,))
+            return None
+        except sqlite3.Error as e:
+            return str(e)
 
     def get_last_inserted_task_id(self):
         try:
-            self.cursor.execute("SELECT last_insert_rowid()")
-            task_id = self.cursor.fetchone()[0]
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT last_insert_rowid()")
+                task_id = cursor.fetchone()[0]
             return task_id
-        except sqlite3.Error as e:
+        except sqlite3.Error:
             return None
 
-def show_error(title, message):
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Icon.Critical)
-    msg.setWindowTitle(title)
-    msg.setText(message)
-    msg.exec()
-
-def show_message(title, message):
-    msg = QMessageBox()
-    msg.setWindowTitle(title)
-    msg.setText(message)
-    msg.exec()

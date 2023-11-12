@@ -1,4 +1,8 @@
+import os
 import sys
+import utils
+import logging
+from dotenv import load_dotenv
 from PyQt6.QtCore import Qt, QDateTime
 from PyQt6.QtWidgets import (
     QApplication,
@@ -18,7 +22,16 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QSizePolicy
 )
-from task_manager import TaskManager, show_error, show_message
+from task_manager import TaskManager
+
+logging.basicConfig(level=logging.INFO, filename='app.log', format='%(asctime)s - %(levelname)s - %(message)s')
+
+# load environment variables from .env file
+load_dotenv()
+
+# Constants
+DEFAULT_USER = utils.get_env_variable('DEFAULT_USER')
+DEFAULT_PASSWORD = utils.get_env_variable('DEFAULT_PASSWORD')
 
 # Initialize the task ID to row mapping dictionary
 task_row_to_id = {}
@@ -55,7 +68,7 @@ class LoginDialog(QDialog):
             self.accept()  # Close the dialog and return QDialog.Accepted
         else:
             # Display an error message or handle failed login
-            show_error("Login Failed", "Invalid username or password.")
+            utils.show_error("Login Failed", "Invalid username or password.")
 
 class MainWindow(QMainWindow):
     def __init__(self, task_manager):
@@ -224,7 +237,7 @@ class MainWindow(QMainWindow):
             task_name = task_name_input.text().strip()
 
             if not task_name:
-                show_error("Task Name Required", "Please enter a task name.")
+                utils.show_error("Task Name Required", "Please enter a task name.")
                 return
 
             due_date = due_date_input.text().strip()
@@ -241,7 +254,7 @@ class MainWindow(QMainWindow):
             error_message, task_id = self.task_manager.add_task(*task)
 
             if error_message:
-                show_error("Task Addition Error", error_message)
+                utils.show_error("Task Addition Error", error_message)
             else:
                 # Retrieve the last inserted task ID
                 if task_id is not None:
@@ -258,9 +271,9 @@ class MainWindow(QMainWindow):
 
                     update_task_list()  # Update the table and sort by due date
                     clear_entries()
-                    show_message("Task Added", f"Task added successfully! ID: {task_id}")
+                    utils.show_message("Task Added", f"Task added successfully! ID: {task_id}")
                 else:
-                    show_error("Task ID Error", "Failed to retrieve the task ID.")
+                    utils.show_error("Task ID Error", "Failed to retrieve the task ID.")
 
         # Function to delete a task by ID
         def delete_task_by_id(task_id):
@@ -276,7 +289,7 @@ class MainWindow(QMainWindow):
             selected_items = task_table_widget.selectedItems()
 
             if not selected_items:
-                show_error("No Task Selected", "Please select a task to remove.")
+                utils.show_error("No Task Selected", "Please select a task to remove.")
                 return
 
             selected_task_ids = []
@@ -292,7 +305,7 @@ class MainWindow(QMainWindow):
                 error_message = self.task_manager.remove_task(selected_task_id)
 
                 if error_message:
-                    show_error("Task Removal Error", error_message)
+                    utils.show_error("Task Removal Error", error_message)
 
             # Delete the selected rows from the table
             selected_rows = {item.row() for item in selected_items}
@@ -348,35 +361,38 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
 
-    # Create an instance of TaskManager
-    task_manager = TaskManager()
+    try:
 
-    # Check if there are existing users
-    existing_users = task_manager.get_existing_users()
+        # Create an instance of TaskManager
+        task_manager = TaskManager()
 
-    if not existing_users:
-        # If there are no users, create a default user with a timestamp
-        default_username = "user"
-        default_password = "password"
-        error_message = task_manager.create_user(default_username, default_password)
-        if error_message:
-            show_error("User Creation Error", error_message)
+        # Check if there are existing users
+        existing_users = task_manager.get_existing_users()
+
+        if not existing_users:
+            # If there are no users, create a default user with a timestamp
+            error_message = task_manager.create_user(DEFAULT_USER, DEFAULT_PASSWORD)
+            if error_message:
+                utils.show_error("User Creation Error", error_message)
+            else:
+                print(f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
         else:
-            print(f"Default user '{default_username}' created with password '{default_password}'")
-    else:
-        print("Users already exist in the database.")
+            print("Users already exist in the database.")
 
-    login_dialog = LoginDialog(task_manager)  # Create the login dialog instance first
+        login_dialog = LoginDialog(task_manager)  # Create the login dialog instance first
 
-    if login_dialog.exec() == QDialog.DialogCode.Accepted:
-        # Show the main window only if login is successful
-        main_window = MainWindow(task_manager)  # Create the main window instance
-        main_window.show()
-        sys.exit(app.exec())
-    else:
-        # Handle login failure (e.g., display an error message)
-        print("Login failed.")
+        if login_dialog.exec() == QDialog.DialogCode.Accepted:
+            # Show the main window only if login is successful
+            main_window = MainWindow(task_manager)  # Create the main window instance
+            main_window.show()
+            sys.exit(app.exec())
+        else:
+            # Handle login failure (e.g., display an error message)
+            print("Login failed.")
 
+    except ValueError as e:
+        print(f"Environment variable validation error: {e}")
+        # Handle the error appropriately (e.g., log it, inform the user, exit the application)
 
 if __name__ == "__main__":
     main()
