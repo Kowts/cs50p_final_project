@@ -1,8 +1,7 @@
-import os
 import sys
 import utils
+import logging
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-import datetime
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -22,6 +21,10 @@ from PyQt6.QtWidgets import (
     QSizePolicy
 )
 from task_manager import TaskManager
+from notification_manager import NotificationManager
+
+# Setup logging as soon as possible, ideally at the start of the application
+utils.setup_logging()
 
 # Constants
 DEFAULT_USER = utils.get_env_variable('DEFAULT_USER')
@@ -33,18 +36,20 @@ task_row_to_id = {}
 class TaskTracker(QThread):
     notify_due_tasks = pyqtSignal(list)
 
+    def __init__(self, task_manager):
+        super().__init__()
+        self.task_manager = task_manager
+
     def run(self):
         while True:
-            self.sleep(3600)  # Wait for an hour before checking again
-            today_tasks = self.get_due_tasks()
+            self.sleep(10)  # Check every hour
+            logging.info("Checking for due tasks...")
+            today_tasks = self.task_manager.get_due_tasks()
             if today_tasks:
                 self.notify_due_tasks.emit(today_tasks)
-
-    def get_due_tasks(self):
-        # Logic to get tasks due today
-        # This should return a list of tasks that are due on the current date
-        due_tasks = []
-        return due_tasks
+                logging.info(f"Found {len(today_tasks)} due tasks.")
+            else:
+                logging.info("No tasks due today.")
 
 class LoginDialog(QDialog):
     def __init__(self, task_manager):
@@ -83,6 +88,16 @@ class LoginDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, task_manager):
         super().__init__()
+
+        self.statusBar().showMessage("Starting task tracker...")
+        logging.info("Application started")
+
+        self.task_manager = TaskManager()  # Create a TaskManager instance
+        self.notification_manager = NotificationManager()
+
+        self.task_tracker = TaskTracker(self.task_manager)
+        self.task_tracker.notify_due_tasks.connect(self.notify_due_tasks)
+        self.task_tracker.start()
 
         self.setWindowTitle("To-Do List Manager")
         self.setGeometry(100, 100, 800, 600)
@@ -281,7 +296,7 @@ class MainWindow(QMainWindow):
 
                     update_task_list()  # Update the table and sort by due date
                     clear_entries()
-                    utils.show_message("Task Added", f"Task added successfully! ID: {task_id}")
+                    utils.send_windows_notification("Task Added", f"Task added successfully! ID: {task_id}")
                 else:
                     utils.show_error("Task ID Error", "Failed to retrieve the task ID.")
 
@@ -367,6 +382,20 @@ class MainWindow(QMainWindow):
         # Close the session
         self.close()
         self.login_dialog.show()
+
+    def notify_due_tasks(self, tasks):
+        # Notify the user about due tasks
+        # This could be updating a status bar, displaying a message box, etc.
+        for task in tasks:
+            notification_id = f"task_due_{task}"  # Unique ID for each task
+            if self.notification_manager.send_notification(
+                notification_id,
+                "Task Due",
+                f"Task '{task}' is due today."
+            ):
+                logging.info(f"Notification sent for task: {task}")
+            else:
+                logging.info(f"Notification already sent for task: {task}")
 
 def main():
     app = QApplication(sys.argv)
