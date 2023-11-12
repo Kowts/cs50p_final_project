@@ -391,7 +391,8 @@ class MainWindow(QMainWindow):
             if self.notification_manager.send_notification(
                 notification_id,
                 "Task Due",
-                f"Task '{task}' is due today."
+                f"Task '{task}' is due today.",
+                frequency = "hourly"
             ):
                 logging.info(f"Notification sent for task: {task}")
             else:
