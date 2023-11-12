@@ -2,7 +2,12 @@ import os
 import sqlite3, utils
 from PyQt6.QtCore import QDateTime
 from dotenv import load_dotenv
+import datetime
+import logging
 from enum import Enum
+
+# Setup logging as soon as possible, ideally at the start of the application
+utils.setup_logging()
 
 # Constants
 DATABASE_FILE = utils.get_env_variable('DATABASE_FILE')
@@ -54,9 +59,9 @@ class TaskManager:
                 self.create_categories_table(conn)
                 self.create_users_table(conn)
         except sqlite3.DatabaseError as e:
-            utils.logging.error(f"Database error: {e}")
+            logging.error(f"Database error: {e}")
         except Exception as e:
-            utils.logging.error(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
 
 
     def create_tasks_table(self, conn):
@@ -147,12 +152,12 @@ class TaskManager:
                 return priorities
         except sqlite3.DatabaseError as e:
             # Handle specific database-related errors
-            utils.logging.error(f"Database error: {e}")
+            logging.error(f"Database error: {e}")
             # Consider logging this error and returning an appropriate response
             return []
         except Exception as e:
             # Handle other, more general exceptions
-            utils.logging.error(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             # Again, consider logging and how you want to handle this in the UI
             return []
 
@@ -165,12 +170,12 @@ class TaskManager:
                 return categories
         except sqlite3.DatabaseError as e:
             # Handle specific database-related errors
-            utils.logging.error(f"Database error: {e}")
+            logging.error(f"Database error: {e}")
             # Consider logging this error and returning an appropriate response
             return []
         except Exception as e:
             # Handle other, more general exceptions
-            utils.logging.error(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             # Again, consider logging and how you want to handle this in the UI
             return []
 
@@ -183,12 +188,12 @@ class TaskManager:
                 return users
         except sqlite3.DatabaseError as e:
             # Handle specific database-related errors
-            utils.logging.error(f"Database error: {e}")
+            logging.error(f"Database error: {e}")
             # Consider logging this error and returning an appropriate response
             return []
         except Exception as e:
             # Handle other, more general exceptions
-            utils.logging.error(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             # Again, consider logging and how you want to handle this in the UI
             return []
 
@@ -255,12 +260,12 @@ class TaskManager:
                 return cursor.fetchall()
         except sqlite3.DatabaseError as e:
             # Handle specific database-related errors
-            utils.logging.error(f"Database error: {e}")
+            logging.error(f"Database error: {e}")
             # Consider logging this error and returning an appropriate response
             return []
         except Exception as e:
             # Handle other, more general exceptions
-            utils.logging.error(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             # Again, consider logging and how you want to handle this in the UI
             return []
 
@@ -283,3 +288,18 @@ class TaskManager:
         except sqlite3.Error:
             return None
 
+    def get_due_tasks(self):
+        today = datetime.date.today().strftime("%Y-%m-%d")
+        try:
+            with utils.get_db_connection(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM tasks WHERE due_date = ?", (today,))
+                tasks = [row[0] for row in cursor.fetchall()]
+                logging.info(f"Tasks due today: {tasks}")
+                return tasks
+        except sqlite3.DatabaseError as e:
+            logging.error(f"Database error: {e}")
+            return []
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            return []
