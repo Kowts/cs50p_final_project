@@ -1,6 +1,8 @@
 # Environments
 .env
-.db
+
+# Database
+*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
