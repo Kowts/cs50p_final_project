@@ -1,9 +1,8 @@
 import os
 import sys
 import utils
-import logging
-from dotenv import load_dotenv
-from PyQt6.QtCore import Qt, QDateTime
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+import datetime
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -24,17 +23,28 @@ from PyQt6.QtWidgets import (
 )
 from task_manager import TaskManager
 
-logging.basicConfig(level=logging.INFO, filename='app.log', format='%(asctime)s - %(levelname)s - %(message)s')
-
-# load environment variables from .env file
-load_dotenv()
-
 # Constants
 DEFAULT_USER = utils.get_env_variable('DEFAULT_USER')
 DEFAULT_PASSWORD = utils.get_env_variable('DEFAULT_PASSWORD')
 
 # Initialize the task ID to row mapping dictionary
 task_row_to_id = {}
+
+class TaskTracker(QThread):
+    notify_due_tasks = pyqtSignal(list)
+
+    def run(self):
+        while True:
+            self.sleep(3600)  # Wait for an hour before checking again
+            today_tasks = self.get_due_tasks()
+            if today_tasks:
+                self.notify_due_tasks.emit(today_tasks)
+
+    def get_due_tasks(self):
+        # Logic to get tasks due today
+        # This should return a list of tasks that are due on the current date
+        due_tasks = []
+        return due_tasks
 
 class LoginDialog(QDialog):
     def __init__(self, task_manager):

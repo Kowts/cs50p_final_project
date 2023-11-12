@@ -4,9 +4,6 @@ from PyQt6.QtCore import QDateTime
 from dotenv import load_dotenv
 from enum import Enum
 
-# load environment variables from .env file
-load_dotenv()
-
 # Constants
 DATABASE_FILE = utils.get_env_variable('DATABASE_FILE')
 DEFAULT_PRIORITIES = utils.get_env_variable('DEFAULT_PRIORITIES').split(',')
