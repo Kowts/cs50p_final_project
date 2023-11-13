@@ -1,4 +1,5 @@
 import os
+import csv
 import sqlite3, utils
 from PyQt6.QtCore import QDateTime
 from dotenv import load_dotenv
@@ -14,7 +15,7 @@ DATABASE_FILE = utils.get_env_variable('DATABASE_FILE')
 DEFAULT_PRIORITIES = utils.get_env_variable('DEFAULT_PRIORITIES').split(',')
 DEFAULT_CATEGORIES = utils.get_env_variable('DEFAULT_CATEGORIES').split(',')
 
-class UserStatus(Enum):
+class DefaultStatus(Enum):
     ACTIVE = 1
     INACTIVE = 0
 class TaskManager:
@@ -206,7 +207,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 hashed_password, salt = utils.hash_password(password)
                 created_at = utils.format_datetime(QDateTime.currentDateTime())
-                user_status = UserStatus.ACTIVE.value
+                user_status = DefaultStatus.ACTIVE.value
 
                 cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)",
                             (username, hashed_password, salt, created_at, user_status))
@@ -242,19 +243,39 @@ class TaskManager:
                 created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor.execute(
                     "INSERT INTO tasks (name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
-                    (task_name, due_date, priority, category, created_at, UserStatus.ACTIVE.value)
+                    (task_name, due_date, priority, category, created_at, DefaultStatus.ACTIVE.value)
                 )
                 task_id = cursor.lastrowid
             return None, task_id
         except sqlite3.Error as e:
             return str(e), None
 
+    def update_task(self, task_id, name, due_date, priority, category):
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE tasks SET name = ?, due_date = ?, priority = ?, category = ? WHERE id = ?", (name, due_date, priority, category, task_id))
+        except sqlite3.Error as e:
+            logging.error(f"Database error while updating task: {e}")
+            return "Failed to update task."
+        return None
+
+    def get_task_details(self, task_id):
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, name, due_date, priority, category FROM tasks WHERE id = ?", (task_id,))
+                return cursor.fetchone()
+        except sqlite3.Error as e:
+            logging.error(f"Database error while retrieving task details: {e}")
+            return None
+
     def list_tasks(self, status=None):
         try:
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
                 if status is None:
-                    cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?', (UserStatus.ACTIVE.value,))
+                    cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?', (DefaultStatus.ACTIVE.value,))
                 else:
                     cursor.execute('SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?', (status,))
                 return cursor.fetchall()
@@ -273,8 +294,26 @@ class TaskManager:
         try:
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
-                cursor.execute('UPDATE tasks SET status = ? WHERE id = ?', (UserStatus.INACTIVE.value, task_id,))
+                cursor.execute('UPDATE tasks SET status = ? WHERE id = ?', (DefaultStatus.INACTIVE.value, task_id,))
             return None
+        except sqlite3.Error as e:
+            return str(e)
+
+    def remove_tasks(self, task_ids):
+        """
+        Set multiple tasks as inactive in the database.
+
+        :param task_ids: A list of task IDs to be set as inactive.
+        """
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                # Create a query string with the correct number of placeholders
+                placeholders = ', '.join(['?'] * len(task_ids))
+                query = f"UPDATE tasks SET status = {DefaultStatus.INACTIVE.value} WHERE id IN ({placeholders})"
+                cursor.execute(query, task_ids)
+                conn.commit()
+            return "Tasks successfully set as inactive."
         except sqlite3.Error as e:
             return str(e)
 
@@ -303,3 +342,39 @@ class TaskManager:
         except Exception as e:
             logging.error(f"An error occurred: {e}")
             return []
+
+    def export_tasks(self, file_path):
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM tasks WHERE status = ?', (DefaultStatus.ACTIVE.value,))
+                tasks = cursor.fetchall()
+
+            with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                # Write the headers
+                writer.writerow(['ID', 'Name', 'Due Date', 'Priority', 'Category', 'Created At', 'Status'])
+                for task in tasks:
+                    writer.writerow(task)
+
+            return "Tasks exported successfully."
+        except Exception as e:
+            return f"Error exporting tasks: {e}"
+
+    def import_tasks(self, file_name):
+        try:
+            with open(file_name, mode='r') as file:
+                reader = csv.reader(file)
+                next(reader, None)  # Skip the header row
+                with sqlite3.connect(self.db_file) as conn:
+                    cursor = conn.cursor()
+                    for row in reader:
+                        if len(row) == 4:
+                            cursor.execute("INSERT INTO tasks (name, due_date, priority, category) VALUES (?, ?, ?, ?)", row)
+                        else:
+                            print(f"Skipping row: {row}")  # Or log this information
+            return "Import successful"
+        except Exception as e:
+            return f"Import failed: {str(e)}"
+
+
