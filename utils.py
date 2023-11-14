@@ -65,8 +65,8 @@ def get_env_variable(var_name, default=None):
 
 # Function to format a QDateTime object into a string.
 # Allows specification of the format.
-def format_datetime(date_time, format="%Y-%m-%d %H:%M:%S"):
-    return date_time.strftime(format)
+def format_datetime(date_time, format="yyyy-MM-dd HH:mm:ss"):
+    return date_time.toString(format)
 
 # Function to parse a string into a QDateTime object.
 # Takes a date-time string and the format it's in.
