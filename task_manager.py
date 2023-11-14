@@ -26,8 +26,8 @@ class TaskManager:
 
     def __init__(self, db_file=DATABASE_FILE):
         self.db_file = db_file
-        self.validate_environment_variables()
         self.setup_database()
+        self.validate_environment_variables()
 
     def validate_environment_variables(self):
         required_vars = ['DATABASE_FILE', 'MAX_CONNECTION', 'DEFAULT_USER', 'DEFAULT_PASSWORD']
@@ -59,6 +59,7 @@ class TaskManager:
                 self.create_priorities_table(conn)
                 self.create_categories_table(conn)
                 self.create_users_table(conn)
+                self.create_preferences_table(conn)
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
         except Exception as e:
@@ -88,7 +89,9 @@ class TaskManager:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS priorities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                status INTEGER DEFAULT 1
             )
         ''')
         self.insert_default_priorities(conn)
@@ -100,7 +103,9 @@ class TaskManager:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                status INTEGER DEFAULT 1
             )
         ''')
         self.insert_default_categories(conn)
@@ -116,7 +121,21 @@ class TaskManager:
                 password TEXT NOT NULL,
                 salt TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                status INTEGER
+                status INTEGER DEFAULT 1
+            )
+        ''')
+
+    def create_preferences_table(self, conn):
+        """
+        Creates the preferences table in the database.
+        """
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS preferences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE,
+                value TEXT,
+                created_at TEXT,
+                status INTEGER DEFAULT 1
             )
         ''')
 
@@ -129,8 +148,9 @@ class TaskManager:
         count = cursor.fetchone()[0]
 
         if count == 0:
+            current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
             for priority in DEFAULT_PRIORITIES:
-                cursor.execute("INSERT INTO priorities (name) VALUES (?)", (priority,))
+                cursor.execute("INSERT INTO priorities (name, created_at) VALUES (?, ?)", (priority, current_time))
 
     def insert_default_categories(self, conn):
         """
@@ -141,8 +161,9 @@ class TaskManager:
         count = cursor.fetchone()[0]
 
         if count == 0:
+            current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
             for category in DEFAULT_CATEGORIES:
-                cursor.execute("INSERT INTO categories (name) VALUES (?)", (category,))
+                cursor.execute("INSERT INTO categories (name, created_at) VALUES (?, ?)", (category, current_time))
 
     def load_priorities(self):
         try:
@@ -369,12 +390,53 @@ class TaskManager:
                 with sqlite3.connect(self.db_file) as conn:
                     cursor = conn.cursor()
                     for row in reader:
-                        if len(row) == 4:
-                            cursor.execute("INSERT INTO tasks (name, due_date, priority, category) VALUES (?, ?, ?, ?)", row)
+                        # Extract required elements from each row
+                        if len(row) >= 5:
+                            task_name = row[1]   # Second element (index 1)
+                            due_date = row[2]    # Third element (index 2)
+                            priority = row[3]    # Fourth element (index 3)
+                            category = row[4]    # Fifth element (index 4)
+
+                            # Check if task name is valid
+                            if not utils.is_valid_task_name(task_name):
+                                raise ValueError(f"Invalid task name: {task_name}")
+
+                            # Insert into the database
+                            created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                            cursor.execute(
+                                "INSERT INTO tasks (name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
+                                (task_name, due_date, priority, category, created_at, DefaultStatus.ACTIVE.value)
+                            )
                         else:
-                            print(f"Skipping row: {row}")  # Or log this information
+                            print(f"Skipping incomplete row: {row}")
             return "Import successful"
         except Exception as e:
             return f"Import failed: {str(e)}"
 
+    def get_preferences(self):
+        # Retrieve preferences from the database
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT key, value FROM preferences")
+                return {key: value for key, value in cursor.fetchall()}
+        except sqlite3.Error as e:
+            return {}
 
+    def save_preferences(self, preferences):
+        """
+        Save preferences to the database.
+        :param preferences: A dictionary of preferences to be saved.
+        :return: None if successful, error message if an error occurs.
+        """
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                for key, value in preferences.items():
+                    cursor.execute(
+                        "REPLACE INTO preferences (key, value, created_at) VALUES (?, ?, ?)", (key, value, current_time))
+        except sqlite3.Error as e:
+            logging.error(f"Error saving preferences: {e}")
+            return f"Failed to save preferences: {e}"
+        return None  # Success
