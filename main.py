@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
+    QCheckBox,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
@@ -25,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 from task_manager import TaskManager
 from notification_manager import NotificationManager
+from preferences_manager import PreferencesManager
 
 # Setup logging as soon as possible, ideally at the start of the application
 utils.setup_logging()
@@ -35,7 +37,6 @@ DEFAULT_PASSWORD = utils.get_env_variable('DEFAULT_PASSWORD')
 
 # Initialize the task ID to row mapping dictionary
 task_row_to_id = {}
-
 
 class TaskTracker(QThread):
     notify_due_tasks = pyqtSignal(list)
@@ -55,12 +56,15 @@ class TaskTracker(QThread):
             else:
                 logging.info("No tasks due today.")
 
-
 class LoginDialog(QDialog):
-    def __init__(self, task_manager):
+    def __init__(self, task_manager, preferences_manager):
         super().__init__()
 
         self.task_manager = task_manager
+        self.preferences_manager = preferences_manager
+
+        # Apply preferences such as theme and font size
+        self.preferences_manager.load_and_apply_preferences()
 
         self.setWindowTitle("Login")
         self.username_label = QLabel("Username:")
@@ -90,15 +94,16 @@ class LoginDialog(QDialog):
             # Display an error message or handle failed login
             utils.show_error("Login Failed", "Invalid username or password.")
 
-
 class MainWindow(QMainWindow):
 
     def __init__(self, task_manager):
         super().__init__()
 
+        self.app = QApplication.instance() # Reference to the QApplication instance
         self.task_manager = task_manager
         self.notification_manager = NotificationManager()
         self.task_tracker = TaskTracker(task_manager)
+        self.preferences_manager = PreferencesManager(self, self.task_manager)  # Initialize PreferencesManager
 
         self.setWindowTitle("To-Do List Manager")
         self.setGeometry(100, 100, 800, 600)
@@ -108,8 +113,9 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Setup UI components and layout
+        # Setup UI components and load and apply preferences
         self.setup_ui()
+        self.preferences_manager.load_and_apply_preferences()
 
         # Start the task tracker thread
         self.task_tracker.notify_due_tasks.connect(self.notify_due_tasks)
@@ -229,27 +235,60 @@ class MainWindow(QMainWindow):
     def setup_menu_widget(self):
         # Create a menu bar
         menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("&File")  # Create a "File" menu
+        file_menu = menu_bar.addMenu("&File") # Create a "File" menu
+        tools_menu = menu_bar.addMenu("&Tools") # Create the Tools menu
+        settings_menu = menu_bar.addMenu("&Settings") # Create the Settings menu
+        help_menu = menu_bar.addMenu("&Help") # Create the Help menu
 
         # Add a "Logout" action to the "File" menu
         logout_action = file_menu.addAction("Logout")
         logout_action.triggered.connect(self.logout)
 
-        # Add Export action
+        # Create Export action
         export_action = QAction("&Export", self)
+        export_action.setShortcut("Ctrl+Shift+E")
         export_action.triggered.connect(self.export_tasks)
-        file_menu.addAction(export_action)
+        tools_menu.addAction(export_action)
 
-        # Add Import action
+        # Create Import action
         import_action = QAction("&Import", self)
+        import_action.setShortcut("Ctrl+Shift+I")
         import_action.triggered.connect(self.import_tasks)
-        file_menu.addAction(import_action)
+        tools_menu.addAction(import_action)
+
+        # Create User Guide action
+        user_guide_action = QAction("&User Guide", self)
+        user_guide_action.setShortcut("F1")
+        user_guide_action.triggered.connect(self.show_user_guide)
+        help_menu.addAction(user_guide_action)
+
+        # Create About action
+        about_action = QAction("&About", self)
+        about_action.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(about_action)
+
+        # Create Preferences action
+        preferences_action = QAction("&Preferences", self)
+        preferences_action.triggered.connect(self.show_preferences_dialog)
+        settings_menu.addAction(preferences_action)
 
         # Create a widget to hold the table widget and add it to the main layout
         table_widget_container = QWidget()
         table_widget_container.setLayout(QVBoxLayout())
         table_widget_container.layout().addWidget(self.task_table_widget)  # Changed here
         self.centralWidget().layout().addWidget(table_widget_container)  # Changed here
+
+    def show_user_guide(self):
+        # Logic to display the user guide
+        QMessageBox.information(self, "User Guide", "Information about how to use the application.")
+
+    def show_about_dialog(self):
+        # Logic to display the about dialog
+        QMessageBox.information(self, "About", "Your application version and details.")
+
+    def show_preferences_dialog(self):
+        dialog = PreferencesDialog(self.task_manager, self.preferences_manager, self)
+        dialog.exec()
 
     def clear_entries(self):
         self.task_name_input.clear()
@@ -508,6 +547,88 @@ class EditTaskDialog(QDialog):
         category = self.category_combobox.currentText()
         return (name, due_date, priority, category)
 
+
+class PreferencesDialog(QDialog):
+    def __init__(self, task_manager, preferences_manager, parent=None):
+        super().__init__(parent)
+
+        self.task_manager = task_manager
+        self.preferences_manager = preferences_manager
+
+        self.setWindowTitle("Preferences")
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        # setting: Theme Selector
+        self.theme_selector = QComboBox()
+        self.theme_selector.addItems(["Light", "Dark"])
+        layout.addWidget(QLabel("Select Theme:"))
+        layout.addWidget(self.theme_selector)
+
+        # setting: A checkbox for enabling notifications
+        self.notification_checkbox = QCheckBox("Enable Notifications", self)
+        layout.addWidget(self.notification_checkbox)
+
+        # setting: Font Size
+        self.font_size_selector = QComboBox()
+        font_sizes = ["8", "10", "12", "14", "16", "18", "20", "24"]  # Add more sizes as needed
+        self.font_size_selector.addItems(font_sizes)
+        layout.addWidget(QLabel("Font Size:"))
+        layout.addWidget(self.font_size_selector)
+
+        # OK and Cancel buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Close)
+        button_box.accepted.connect(self.save_preferences)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        # Load current preferences
+        self.load_preferences()
+
+    def save_preferences(self):
+        # Save the current preferences to the database
+        theme = self.theme_selector.currentText()
+        enable_notifications = self.notification_checkbox.isChecked()
+        font_size = self.font_size_selector.currentText()
+
+        # Save preferences
+        self.task_manager.save_preferences({
+            'theme': theme,
+            'enable_notifications': str(enable_notifications),
+            'font_size': font_size
+        })
+
+        # Apply preferences immediately
+        self.preferences_manager.apply_theme(theme)
+        self.preferences_manager.apply_notification_setting(enable_notifications)
+        self.preferences_manager.apply_font_size(font_size)
+
+        # Send notification about successful save
+        utils.send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.")
+
+        # Optional: Close the preferences dialog after saving
+        self.accept()
+
+    def load_preferences(self):
+        # Load current preferences and update the UI
+        preferences = self.task_manager.get_preferences()
+
+        # Convert the preference string to a boolean
+        enable_notifications = preferences.get('enable_notifications', 'False')  # Default to 'False' if not found
+        enable_notifications_bool = enable_notifications.lower() == 'true'  # Convert to boolean
+        self.notification_checkbox.setChecked(enable_notifications_bool)
+
+        font_size = preferences.get('font_size', '12')  # Default to '12'
+        self.font_size_selector.setCurrentText(font_size)
+
+        # Get the saved theme (default to "Light" if not set)
+        saved_theme = preferences.get('theme', 'Light')
+        index = self.theme_selector.findText(saved_theme) # Find the index of the saved theme in the combo box and set it
+        if index >= 0:
+            self.theme_selector.setCurrentIndex(index)
+
 def main():
     app = QApplication(sys.argv)
 
@@ -515,6 +636,12 @@ def main():
 
         # Create an instance of TaskManager
         task_manager = TaskManager()
+
+        # Initialize MainWindow
+        main_window = MainWindow(task_manager)
+
+        # Initialize PreferencesManager with main_window and task_manager
+        preferences_manager = PreferencesManager(main_window, task_manager)
 
         # Check if there are existing users
         existing_users = task_manager.get_existing_users()
@@ -531,12 +658,11 @@ def main():
             print("Users already exist in the database.")
 
         # Create the login dialog instance first
-        login_dialog = LoginDialog(task_manager)
+        login_dialog = LoginDialog(task_manager, preferences_manager)
+
 
         if login_dialog.exec() == QDialog.DialogCode.Accepted:
             # Show the main window only if login is successful
-            # Create the main window instance
-            main_window = MainWindow(task_manager)
             main_window.show()
             sys.exit(app.exec())
         else:
