@@ -337,7 +337,7 @@ class MainWindow(QMainWindow):
                 # Refresh the task list and clear the input fields
                 self.update_task_list()
                 self.clear_entries()
-                utils.send_windows_notification("Task Added", f"Task added successfully! ID: {task_id}")
+                utils.send_windows_notification("Task Added", f"Task added successfully! ID: {task_id}", self.task_manager)
             else:
                 utils.show_error("Task ID Error", "Failed to retrieve the task ID.")
 
@@ -363,7 +363,7 @@ class MainWindow(QMainWindow):
         # Bulk remove tasks from database (implement this in TaskManager)
         try:
             self.task_manager.remove_tasks(selected_task_ids)
-            utils.send_windows_notification("Success", "Tasks successfully removed.")
+            utils.send_windows_notification("Success", "Tasks successfully removed.", self.task_manager)
         except Exception as e:
             logging.error(f"An error occurred: {e}")
             return
@@ -456,12 +456,7 @@ class MainWindow(QMainWindow):
         # This could be updating a status bar, displaying a message box, etc.
         for task in tasks:
             notification_id = f"task_due_{task}"  # Unique ID for each task
-            if self.notification_manager.send_notification(
-                notification_id,
-                "Task Due",
-                f"Task '{task}' is due today.",
-                frequency="hourly"
-            ):
+            if self.notification_manager.send_notification(notification_id, "Task Due", f"Task '{task}' is due today.", self.task_manager, frequency="hourly"):
                 logging.info(f"Notification sent for task: {task}")
             else:
                 logging.info(f"Notification already sent for task: {task}")
@@ -472,7 +467,7 @@ class MainWindow(QMainWindow):
         if file_name:
             try:
                 message = self.task_manager.export_tasks(file_name)
-                utils.send_windows_notification("Export Successful", message)
+                utils.send_windows_notification("Export Successful", message, self.task_manager)
 
             except Exception as e:
                 logging.error("An error occurred while exporting tasks: {e}")
@@ -606,7 +601,7 @@ class PreferencesDialog(QDialog):
         self.preferences_manager.apply_font_size(font_size)
 
         # Send notification about successful save
-        utils.send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.")
+        utils.send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.", self.task_manager)
 
         # Optional: Close the preferences dialog after saving
         self.accept()
