@@ -25,7 +25,6 @@ class PreferencesManager:
         return None
 
     def apply_font_size(self, font_size):
-        print(font_size)
         font = QApplication.instance().font()
         font.setPointSize(int(font_size.replace('pt', '')))
         QApplication.instance().setFont(font)

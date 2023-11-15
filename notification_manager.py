@@ -44,14 +44,18 @@ class NotificationManager:
                 return True
         return True
 
-    def send_notification(self, notification_id, title, message, frequency="daily", timeout=10, app_name='YourApp'):
+    def send_notification(self, notification_id, title, message, task_manager, frequency="daily", timeout=10, app_name='YourApp'):
         if not title or not message:
             logging.error("Notification title and message cannot be empty.")
             return False
 
         try:
-            if self.should_send_notification(notification_id, frequency):
-                success = utils.send_windows_notification(title, message, timeout, app_name)
+            # Retrieve notification preference from user settings
+            preferences = task_manager.get_preferences()
+            enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
+
+            if enable_notifications and self.should_send_notification(notification_id, frequency):
+                success = utils.send_windows_notification(title, message, task_manager, timeout, app_name)
                 if success:
                     self.sent_notifications[notification_id] = datetime.datetime.now()
                     logging.info(f"Notification sent: {title}")
@@ -59,8 +63,9 @@ class NotificationManager:
                     logging.warning(f"Failed to send notification: {title}")
                 return success
             else:
-                logging.info(f"Notification not sent (already sent according to frequency '{frequency}'): {title}")
+                logging.info(f"Notification not sent: User has disabled notifications or already sent according to frequency '{frequency}'")
                 return False
         except Exception as e:
             logging.error(f"Error in sending notification: {e}")
             return False
+

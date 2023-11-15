@@ -91,27 +91,41 @@ def show_message(title, message):
     msg.exec()
 
 # Send a Windows notification asynchronously and log the action.
-def send_windows_notification(title: str, message: str, timeout: int = 10, app_name: str = 'YourApp') -> bool:
+def send_windows_notification(title: str, message: str, task_manager, timeout: int = 10, app_name: str = 'YourApp') -> bool:
     """
+    Send a Windows notification if the user has enabled notifications.
+
     Args:
         title (str): The title of the notification.
         message (str): The message content of the notification.
-        timeout (int): The time in seconds for the notification to disappear (default is 10 seconds).
-        app_name (str): The name of your application (default is 'YourApp').
+        task_manager: Instance of TaskManager to retrieve user preferences.
+        timeout (int): The time in seconds for the notification to disappear.
+        app_name (str): The name of your application.
 
     Returns:
         bool: True if the notification was sent successfully, False otherwise.
     """
     try:
-        notification.notify(
-            title=title,
-            message=message,
-            app_name=app_name,
-            timeout=timeout
-        )
-        logging.info(f"Sent Windows notification: Title='{title}', Message='{message}', Timeout={timeout}, App Name='{app_name}'")
-        return True
+        # Retrieve notification preference from user settings
+        preferences = task_manager.get_preferences()
+        enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
+
+        if enable_notifications:
+            notification.notify(
+                title=title,
+                message=message,
+                app_name=app_name,
+                timeout=timeout
+            )
+            logging.info(
+                f"Sent Windows notification: Title='{title}', Message='{message}', Timeout={timeout}, App Name='{app_name}'")
+            return True
+        else:
+            logging.info(
+                "Notification not sent: User has disabled notifications")
+            return False
     except Exception as e:
         logging.error(f"Error sending Windows notification: {str(e)}")
         return False
+
 
