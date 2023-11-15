@@ -105,6 +105,10 @@ class MainWindow(QMainWindow):
         self.task_tracker = TaskTracker(task_manager)
         self.preferences_manager = PreferencesManager(self, self.task_manager)  # Initialize PreferencesManager
 
+        # Initialize your UI components like tables and dropdowns here
+        self.myTable = QTableWidget(self)
+        self.myDropdown = QComboBox(self)
+
         self.setWindowTitle("To-Do List Manager")
         self.setGeometry(100, 100, 800, 600)
         self.resize(800, 600)
@@ -116,6 +120,9 @@ class MainWindow(QMainWindow):
         # Setup UI components and load and apply preferences
         self.setup_ui()
         self.preferences_manager.load_and_apply_preferences()
+
+        # Connect the theme_changed signal to a slot method
+        self.preferences_manager.theme_changed.connect(self.refresh_ui_components)
 
         # Start the task tracker thread
         self.task_tracker.notify_due_tasks.connect(self.notify_due_tasks)
@@ -204,6 +211,13 @@ class MainWindow(QMainWindow):
         # Update the task list to populate the table and menu
         self.update_task_list()
         self.setup_menu_widget()
+
+    def refresh_ui_components(self):
+        # Refresh styles of UI components
+        self.myTable.setStyleSheet(QApplication.instance().styleSheet())
+        self.myDropdown.setStyleSheet(QApplication.instance().styleSheet())
+        self.myTable.update()
+        self.myDropdown.update()
 
     def show_date_picker(self):
         if self.date_picker_dialog.exec() == QDialog.DialogCode.Accepted:
@@ -558,7 +572,7 @@ class PreferencesDialog(QDialog):
 
         # setting: Theme Selector
         self.theme_selector = QComboBox()
-        self.theme_selector.addItems(["Light", "Dark"])
+        self.theme_selector.addItems(["Light", "Dark", "Default"])
         layout.addWidget(QLabel("Select Theme:"))
         layout.addWidget(self.theme_selector)
 

@@ -392,7 +392,7 @@ class TaskManager:
             logging.error(f"An error occurred: {e}")
             return []
 
-    def remove_task(self, task_id):
+    def remove_tasks(self, task_ids):
         """
         Sets a task's status to inactive, effectively removing it from active listings.
 
@@ -405,9 +405,14 @@ class TaskManager:
         try:
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
-                cursor.execute('UPDATE tasks SET status = ? WHERE id = ?', (DefaultStatus.INACTIVE.value, task_id,))
+                # Create a query string with the correct number of placeholders
+                placeholders = ', '.join(['?'] * len(task_ids))
+                query = f"UPDATE tasks SET status = {DefaultStatus.INACTIVE.value} WHERE id IN ({placeholders})"
+                cursor.execute(query, task_ids)
+                conn.commit()
+            return "Tasks successfully set as inactive."
         except sqlite3.Error as e:
-            return str(e)  # Returns the error message in case of failure
+            return str(e)
 
     def get_last_inserted_task_id(self):
         """
@@ -540,8 +545,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 for key, value in preferences.items():
-                    cursor.execute(
-                        "REPLACE INTO preferences (key, value, created_at) VALUES (?, ?, ?)", (key, value, current_time))
+                    cursor.execute("REPLACE INTO preferences (key, value, created_at) VALUES (?, ?, ?)", (key, value, current_time))
         except sqlite3.Error as e:
             logging.error(f"Error saving preferences: {e}")
             return f"Failed to save preferences: {e}"

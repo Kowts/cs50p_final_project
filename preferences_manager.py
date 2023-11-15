@@ -1,9 +1,14 @@
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 from qt_material import apply_stylesheet
 
+DEFAULT_STYLESHEET = ""  # or define your default styles here
 
-class PreferencesManager:
+class PreferencesManager(QObject):
     """Manages user preferences for the application's UI and functionalities."""
+
+    # Define a signal for theme change
+    theme_changed = pyqtSignal()
 
     def __init__(self, main_window, task_manager):
         """Initializes the PreferencesManager with the main application window and task manager.
@@ -12,6 +17,8 @@ class PreferencesManager:
             main_window (QMainWindow): The main window of the application.
             task_manager (TaskManager): A manager to handle tasks and preferences.
         """
+        super().__init__()  # Initialize the parent QObject class
+
         self.main_window = main_window
         self.task_manager = task_manager
 
@@ -28,11 +35,16 @@ class PreferencesManager:
             apply_stylesheet(app, theme='dark_blue.xml')
         elif theme_name == 'Light':
             # Apply a light theme with blue accents and inverted secondary colors
-            apply_stylesheet(app, theme='light_blue.xml',
-                             invert_secondary=True)
+            apply_stylesheet(app, theme='light_blue.xml', invert_secondary=True)
+        elif theme_name == 'Default':
+            # Reset to the application's default theme
+            app.setStyleSheet(DEFAULT_STYLESHEET)
         else:
-            # If the theme is unrecognized, reset to the default style
-            app.setStyleSheet("")
+            # Handle other themes or reset to default if an unknown theme is passed
+            app.setStyleSheet("")  # Fallback to PyQt's built-in styles
+
+        # Emit the theme_changed signal
+        self.theme_changed.emit()
 
     def apply_notification_setting(self, enable_notifications):
         """Enables or disables notifications based on user preference.
