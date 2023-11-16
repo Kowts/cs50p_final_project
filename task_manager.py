@@ -34,6 +34,21 @@ class TaskManager:
         self.setup_database()
         self.validate_environment_variables()
 
+    def get_db_connection(self):
+        """
+        Establishes and returns a database connection.
+
+        Returns:
+            A connection object to the SQLite database.
+        """
+        try:
+            conn = sqlite3.connect(self.db_file)
+            return conn
+        except sqlite3.Error as e:
+            # You may want to handle this error differently depending on your application's needs
+            logging.error(f"Database connection error: {e}")
+            raise
+
     def validate_environment_variables(self):
         """
         Validates required environment variables and raises ValueError if any are missing or invalid.
@@ -64,7 +79,7 @@ class TaskManager:
         """
         try:
             # Establish database connection and create tables
-            with utils.get_db_connection(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 self.create_tasks_table(conn)
                 self.create_priorities_table(conn)
                 self.create_categories_table(conn)
@@ -183,7 +198,7 @@ class TaskManager:
         """
         try:
             # [Database query logic]
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT name FROM priorities')
                 priorities = [row[0] for row in cursor.fetchall()]
@@ -207,7 +222,7 @@ class TaskManager:
             A list of category names if the query is successful, an empty list otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT name FROM categories')
                 categories = [row[0] for row in cursor.fetchall()]
@@ -221,6 +236,78 @@ class TaskManager:
             logging.error(f"An error occurred: {e}")
             return []  # Returns an empty list as a fallback
 
+    def priority_exists(self, priority_name):
+        """
+        Checks if a priority already exists in the database.
+
+        Args:
+            priority_name (str): The name of the priority to check.
+
+        Returns:
+            bool: True if priority exists, False otherwise.
+        """
+        with self.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM priorities WHERE name = ?", (priority_name,))
+            return cursor.fetchone() is not None
+
+    def add_priority(self, priority_name):
+        """
+        Adds a new priority to the priorities table.
+
+        Args:
+            priority_name (str): The name of the new priority to add.
+        """
+        # Avoid adding a priority if it already exists
+        if self.priority_exists(priority_name):
+            return f"Priority '{priority_name}' already exists."
+
+        try:
+            with self.get_db_connection() as conn:
+                current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO priorities (name, created_at, status) VALUES (?, ?, ?)", (priority_name, current_time, 1))
+                conn.commit()  # Make sure to commit the changes
+            return f"Priority '{priority_name}' added successfully."
+        except sqlite3.Error as e:
+            return f"Failed to add priority: {e}"
+
+    def category_exists(self, category_name):
+        """
+        Checks if a category already exists in the database.
+
+        Args:
+            category_name (str): The name of the category to check.
+
+        Returns:
+            bool: True if the category exists, False otherwise.
+        """
+        with self.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM categories WHERE name = ?", (category_name,))
+            return cursor.fetchone() is not None
+
+    def add_category(self, category_name):
+        """
+        Adds a new category to the categories table.
+
+        Args:
+            category_name (str): The name of the new category to add.
+        """
+        # Avoid adding a category if it already exists
+        if self.category_exists(category_name):
+            return f"Category '{category_name}' already exists."
+
+        try:
+            with self.get_db_connection() as conn:
+                current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO categories (name, created_at, status) VALUES (?, ?, ?)", (category_name, current_time, 1))
+                conn.commit()  # Make sure to commit the changes
+            return f"Category '{category_name}' added successfully."
+        except sqlite3.Error as e:
+            return f"Failed to add category: {e}"
+
     def get_existing_users(self):
         """
         Retrieves a list of existing usernames from the database.
@@ -229,7 +316,7 @@ class TaskManager:
             A list of usernames if the query is successful, an empty list otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT username FROM users')
                 users = [row[0] for row in cursor.fetchall()]
@@ -264,8 +351,7 @@ class TaskManager:
                 created_at = utils.format_datetime(QDateTime.currentDateTime())
                 user_status = DefaultStatus.ACTIVE.value
 
-                cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)",
-                            (username, hashed_password, salt, created_at, user_status))
+                cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)", (username, hashed_password, salt, created_at, user_status))
             return None
         except sqlite3.Error as e:
             return str(e)
@@ -282,7 +368,7 @@ class TaskManager:
             True if credentials are valid, False otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT password, salt FROM users WHERE username = ?", (username,))
                 stored_data = cursor.fetchone()
@@ -315,7 +401,7 @@ class TaskManager:
             raise ValueError("Invalid task name.")
 
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor.execute(
@@ -342,7 +428,7 @@ class TaskManager:
             None if successful, an error message otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("UPDATE tasks SET name = ?, due_date = ?, priority = ?, category = ? WHERE id = ?", (name, due_date, priority, category, task_id))
         except sqlite3.Error as e:
@@ -361,7 +447,7 @@ class TaskManager:
             A tuple containing task details if successful, None otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT id, name, due_date, priority, category FROM tasks WHERE id = ?", (task_id,))
                 return cursor.fetchone()  # Returns a single task's details
@@ -380,7 +466,7 @@ class TaskManager:
             A list of tasks matching the given status, empty list in case of an error.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 query = 'SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?'
                 cursor.execute(query, (status or DefaultStatus.ACTIVE.value,))
@@ -403,7 +489,7 @@ class TaskManager:
             None if successful, an error message otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 # Create a query string with the correct number of placeholders
                 placeholders = ', '.join(['?'] * len(task_ids))
@@ -422,7 +508,7 @@ class TaskManager:
             The ID of the last inserted task if successful, None otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT last_insert_rowid()")
                 task_id = cursor.fetchone()[0]
@@ -463,7 +549,7 @@ class TaskManager:
             A success message if the export is successful, an error message otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT * FROM tasks WHERE status = ?', (DefaultStatus.ACTIVE.value,))
                 tasks = cursor.fetchall()
@@ -492,7 +578,7 @@ class TaskManager:
             with open(file_name, mode='r') as file:
                 reader = csv.reader(file)
                 next(reader, None)  # Skip the header row
-                with sqlite3.connect(self.db_file) as conn:
+                with self.get_db_connection() as conn:
                     cursor = conn.cursor()
                     for row in reader:
                         # Ensure each row has the required number of elements
@@ -526,7 +612,7 @@ class TaskManager:
             A dictionary of preferences if successful, an empty dictionary otherwise.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT key, value FROM preferences")
                 # Create a dictionary from the fetched preferences
@@ -541,7 +627,7 @@ class TaskManager:
         :return: None if successful, error message if an error occurs.
         """
         try:
-            with sqlite3.connect(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 for key, value in preferences.items():

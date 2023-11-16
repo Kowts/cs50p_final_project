@@ -63,6 +63,9 @@ class LoginDialog(QDialog):
         self.task_manager = task_manager
         self.preferences_manager = preferences_manager
 
+        # Counter for failed login attempts
+        self.failed_attempts = 0
+
         # Apply preferences such as theme and font size
         self.preferences_manager.load_and_apply_preferences()
 
@@ -84,18 +87,23 @@ class LoginDialog(QDialog):
         self.setLayout(layout)
 
     def try_login(self):
+        MAX_ATTEMPTS = 3  # Maximum number of allowed attempts
+
         username = self.username_input.text()
         password = self.password_input.text()
 
-        # Check the credentials using the verify_user method
         if self.task_manager.verify_user(username, password):
-            self.accept()  # Close the dialog and return QDialog.Accepted
+            self.accept()  # Successful login
         else:
-            # Display an error message or handle failed login
-            utils.show_error("Login Failed", "Invalid username or password.")
+            self.failed_attempts += 1
+            if self.failed_attempts >= MAX_ATTEMPTS:
+                QMessageBox.critical(self, "Login Failed", "Maximum login attempts reached. Exiting application.")
+                sys.exit()  # Exit the application after too many failed attempts
+            else:
+                remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
+                QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
 
 class MainWindow(QMainWindow):
-
     def __init__(self, task_manager):
         super().__init__()
 
@@ -104,10 +112,6 @@ class MainWindow(QMainWindow):
         self.notification_manager = NotificationManager()
         self.task_tracker = TaskTracker(task_manager)
         self.preferences_manager = PreferencesManager(self, self.task_manager)  # Initialize PreferencesManager
-
-        # Initialize your UI components like tables and dropdowns here
-        self.myTable = QTableWidget(self)
-        self.myDropdown = QComboBox(self)
 
         self.setWindowTitle("To-Do List Manager")
         self.setGeometry(100, 100, 800, 600)
@@ -120,9 +124,6 @@ class MainWindow(QMainWindow):
         # Setup UI components and load and apply preferences
         self.setup_ui()
         self.preferences_manager.load_and_apply_preferences()
-
-        # Connect the theme_changed signal to a slot method
-        self.preferences_manager.theme_changed.connect(self.refresh_ui_components)
 
         # Start the task tracker thread
         self.task_tracker.notify_due_tasks.connect(self.notify_due_tasks)
@@ -139,6 +140,12 @@ class MainWindow(QMainWindow):
         due_date_label = QLabel("Due Date:")
         self.due_date_input = QLineEdit()
 
+        # Add widgets to layout
+        layout.addWidget(task_name_label)
+        layout.addWidget(self.task_name_input)
+        layout.addWidget(due_date_label)
+        layout.addWidget(self.due_date_input)
+
         # Setup date picker dialog
         self.date_picker_dialog = QDialog()
         date_picker_layout = QVBoxLayout(self.date_picker_dialog)
@@ -151,12 +158,6 @@ class MainWindow(QMainWindow):
 
         # Connect the date picker function to the input field's click event
         self.due_date_input.mousePressEvent = lambda event: self.show_date_picker()
-
-        # Add widgets to layout
-        layout.addWidget(task_name_label)
-        layout.addWidget(self.task_name_input)
-        layout.addWidget(due_date_label)
-        layout.addWidget(self.due_date_input)
 
         # Create vertical layouts for Priority and Category
         priority_layout = QVBoxLayout()
@@ -212,13 +213,6 @@ class MainWindow(QMainWindow):
         self.update_task_list()
         self.setup_menu_widget()
 
-    def refresh_ui_components(self):
-        # Refresh styles of UI components
-        self.myTable.setStyleSheet(QApplication.instance().styleSheet())
-        self.myDropdown.setStyleSheet(QApplication.instance().styleSheet())
-        self.myTable.update()
-        self.myDropdown.update()
-
     def show_date_picker(self):
         if self.date_picker_dialog.exec() == QDialog.DialogCode.Accepted:
             selected_date = self.calendar_widget.selectedDate()
@@ -251,6 +245,7 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("&File") # Create a "File" menu
         tools_menu = menu_bar.addMenu("&Tools") # Create the Tools menu
+        data_menu = menu_bar.addMenu("&Data") # Create the Data menu
         settings_menu = menu_bar.addMenu("&Settings") # Create the Settings menu
         help_menu = menu_bar.addMenu("&Help") # Create the Help menu
 
@@ -269,6 +264,16 @@ class MainWindow(QMainWindow):
         import_action.setShortcut("Ctrl+Shift+I")
         import_action.triggered.connect(self.import_tasks)
         tools_menu.addAction(import_action)
+
+        # Add "Add Priority" action
+        add_priority_action = QAction("Add &Priority", self)
+        add_priority_action.triggered.connect(self.show_add_priority_dialog)
+        data_menu.addAction(add_priority_action)
+
+        # Add "Add Category" action
+        add_category_action = QAction("Add &Category", self)
+        add_category_action.triggered.connect(self.show_add_category_dialog)
+        data_menu.addAction(add_category_action)
 
         # Create User Guide action
         user_guide_action = QAction("&User Guide", self)
@@ -303,6 +308,27 @@ class MainWindow(QMainWindow):
     def show_preferences_dialog(self):
         dialog = PreferencesDialog(self.task_manager, self.preferences_manager, self)
         dialog.exec()
+
+    def show_add_priority_dialog(self):
+        dialog = AddDataDialog(self.task_manager, 'priority')
+        dialog.data_added.connect(self.update_dropdowns)
+        dialog.exec()
+
+    def show_add_category_dialog(self):
+        dialog = AddDataDialog(self.task_manager, 'category')
+        dialog.data_added.connect(self.update_dropdowns)
+        dialog.exec()
+
+    def update_dropdowns(self):
+        # Refresh priority dropdown
+        self.priority_combobox.clear()
+        priorities = self.task_manager.load_priorities()
+        self.priority_combobox.addItems(priorities)
+
+        # Refresh category dropdown
+        self.category_combobox.clear()
+        categories = self.task_manager.load_categories()
+        self.category_combobox.addItems(categories)
 
     def clear_entries(self):
         self.task_name_input.clear()
@@ -556,7 +582,6 @@ class EditTaskDialog(QDialog):
         category = self.category_combobox.currentText()
         return (name, due_date, priority, category)
 
-
 class PreferencesDialog(QDialog):
     def __init__(self, task_manager, preferences_manager, parent=None):
         super().__init__(parent)
@@ -637,6 +662,46 @@ class PreferencesDialog(QDialog):
         index = self.theme_selector.findText(saved_theme) # Find the index of the saved theme in the combo box and set it
         if index >= 0:
             self.theme_selector.setCurrentIndex(index)
+
+class AddDataDialog(QDialog):
+
+    data_added = pyqtSignal()  # Signal to notify that new data was added
+
+    def __init__(self, task_manager, data_type, parent=None):
+        super().__init__(parent)
+        self.task_manager = task_manager
+        self.data_type = data_type  # 'priority' or 'category'
+        self.setWindowTitle(f"Add {self.data_type.capitalize()}")
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.data_input = QLineEdit()
+        layout.addWidget(QLabel(f"{self.data_type.capitalize()} Name:"))
+        layout.addWidget(self.data_input)
+
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_data)
+        layout.addWidget(save_button)
+
+        self.setLayout(layout)
+
+    def save_data(self):
+        data = self.data_input.text().strip()
+        if data:
+            if self.data_type == 'priority' and not self.task_manager.priority_exists(data):
+                self.task_manager.add_priority(data)
+                utils.send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
+                self.data_added.emit()  # Emit the signal when data is added
+                self.accept()
+            elif self.data_type == 'category' and not self.task_manager.category_exists(data):
+                self.task_manager.add_category(data)
+                utils.send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
+                self.data_added.emit()  # Emit the signal when data is added
+                self.accept()
+            else:
+                QMessageBox.warning(self, "Exists", f"{self.data_type.capitalize()} '{data}' already exists.")
 
 def main():
     app = QApplication(sys.argv)
