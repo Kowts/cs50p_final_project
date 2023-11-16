@@ -239,31 +239,32 @@ class MainWindow(QMainWindow):
         # Apply the table style
         self.apply_table_style()
 
-
     def setup_menu_widget(self):
         # Create a menu bar
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("&File") # Create a "File" menu
-        tools_menu = menu_bar.addMenu("&Tools") # Create the Tools menu
         data_menu = menu_bar.addMenu("&Data") # Create the Data menu
         settings_menu = menu_bar.addMenu("&Settings") # Create the Settings menu
         help_menu = menu_bar.addMenu("&Help") # Create the Help menu
-
-        # Add a "Logout" action to the "File" menu
-        logout_action = file_menu.addAction("Logout")
-        logout_action.triggered.connect(self.logout)
 
         # Create Export action
         export_action = QAction("&Export", self)
         export_action.setShortcut("Ctrl+Shift+E")
         export_action.triggered.connect(self.export_tasks)
-        tools_menu.addAction(export_action)
+        file_menu.addAction(export_action)
 
         # Create Import action
         import_action = QAction("&Import", self)
         import_action.setShortcut("Ctrl+Shift+I")
         import_action.triggered.connect(self.import_tasks)
-        tools_menu.addAction(import_action)
+        file_menu.addAction(import_action)
+
+        # Add a separator line
+        file_menu.addSeparator()
+
+        # Add a "Logout" action
+        logout_action = file_menu.addAction("Logout")
+        logout_action.triggered.connect(self.logout)
 
         # Add "Add Priority" action
         add_priority_action = QAction("Add &Priority", self)
@@ -296,6 +297,7 @@ class MainWindow(QMainWindow):
         table_widget_container.setLayout(QVBoxLayout())
         table_widget_container.layout().addWidget(self.task_table_widget)  # Changed here
         self.centralWidget().layout().addWidget(table_widget_container)  # Changed here
+
 
     def show_user_guide(self):
         # Logic to display the user guide
@@ -670,7 +672,7 @@ class AddDataDialog(QDialog):
     def __init__(self, task_manager, data_type, parent=None):
         super().__init__(parent)
         self.task_manager = task_manager
-        self.data_type = data_type  # 'priority' or 'category'
+        self.data_type = data_type # 'priority' or 'category'
         self.setWindowTitle(f"Add {self.data_type.capitalize()}")
         self.init_ui()
 
@@ -678,7 +680,7 @@ class AddDataDialog(QDialog):
         layout = QVBoxLayout()
 
         self.data_input = QLineEdit()
-        layout.addWidget(QLabel(f"{self.data_type.capitalize()} Name:"))
+        layout.addWidget(QLabel("Name:"))
         layout.addWidget(self.data_input)
 
         save_button = QPushButton("Save")
