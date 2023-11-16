@@ -57,7 +57,7 @@ class TaskTracker(QThread):
                 logging.info("No tasks due today.")
 
 class LoginDialog(QDialog):
-    def __init__(self, task_manager, preferences_manager):
+    def __init__(self, task_manager, preferences_manager=None):
         super().__init__()
 
         self.task_manager = task_manager
@@ -66,8 +66,9 @@ class LoginDialog(QDialog):
         # Counter for failed login attempts
         self.failed_attempts = 0
 
-        # Apply preferences such as theme and font size
-        self.preferences_manager.load_and_apply_preferences()
+        # Only apply preferences if preferences_manager is provided
+        if self.preferences_manager:
+            self.preferences_manager.load_and_apply_preferences()
 
         self.setWindowTitle("Login")
         self.username_label = QLabel("Username:")
@@ -94,7 +95,9 @@ class LoginDialog(QDialog):
 
         if self.task_manager.verify_user(username, password):
             self.accept()  # Successful login
+            self.task_manager.log_user_activity(username, "Login", "Success")
         else:
+            self.task_manager.log_user_activity(username, "Login", "Failure")
             self.failed_attempts += 1
             if self.failed_attempts >= MAX_ATTEMPTS:
                 QMessageBox.critical(self, "Login Failed", "Maximum login attempts reached. Exiting application.")
@@ -103,8 +106,16 @@ class LoginDialog(QDialog):
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
                 QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
 
+    def reset_login_dialog(self):
+        """
+        Resets the login dialog to its initial state.
+        """
+        self.username_input.clear()
+        self.password_input.clear()
+        self.failed_attempts = 0
+
 class MainWindow(QMainWindow):
-    def __init__(self, task_manager):
+    def __init__(self, task_manager, login_dialog):
         super().__init__()
 
         self.app = QApplication.instance() # Reference to the QApplication instance
@@ -112,6 +123,9 @@ class MainWindow(QMainWindow):
         self.notification_manager = NotificationManager()
         self.task_tracker = TaskTracker(task_manager)
         self.preferences_manager = PreferencesManager(self, self.task_manager)  # Initialize PreferencesManager
+
+        # Store the login dialog as an attribute
+        self.login_dialog = login_dialog
 
         self.setWindowTitle("To-Do List Manager")
         self.setGeometry(100, 100, 800, 600)
@@ -264,6 +278,7 @@ class MainWindow(QMainWindow):
 
         # Add a "Logout" action
         logout_action = file_menu.addAction("Logout")
+        logout_action.setShortcut("F12")
         logout_action.triggered.connect(self.logout)
 
         # Add "Add Priority" action
@@ -489,8 +504,22 @@ class MainWindow(QMainWindow):
         self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     def logout(self):
+        # Assuming self.username stores the username of the logged-in user
+        if hasattr(self, 'username'):
+            # Log the logout event
+            logout_status = self.task_manager.log_user_activity(self.username, "Logout")
+
+            if logout_status is not None:
+                # Handle any errors in logging the logout event, if necessary
+                print(f"Error logging logout: {logout_status}")
+
         # Close the session
         self.close()
+
+        # Reset the login dialog for the next login
+        self.login_dialog.reset_login_dialog()
+
+        # Show the login dialog
         self.login_dialog.show()
 
     def notify_due_tasks(self, tasks):
@@ -709,45 +738,45 @@ def main():
     app = QApplication(sys.argv)
 
     try:
-
         # Create an instance of TaskManager
         task_manager = TaskManager()
 
-        # Initialize MainWindow
-        main_window = MainWindow(task_manager)
+        # Create the login dialog instance without preferences_manager
+        login_dialog = LoginDialog(task_manager)
+
+        # Initialize MainWindow with task_manager and login_dialog
+        main_window = MainWindow(task_manager, login_dialog)
 
         # Initialize PreferencesManager with main_window and task_manager
         preferences_manager = PreferencesManager(main_window, task_manager)
 
+        # Now set preferences_manager in login_dialog
+        login_dialog.preferences_manager = preferences_manager
+
         # Check if there are existing users
         existing_users = task_manager.get_existing_users()
-
         if not existing_users:
-            # If there are no users, create a default user with a timestamp
+            # Create a default user if no users exist
             error_message = task_manager.create_user(
                 DEFAULT_USER, DEFAULT_PASSWORD)
             if error_message:
                 utils.show_error("User Creation Error", error_message)
             else:
-                print(f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
+                print(
+                    f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
         else:
             print("Users already exist in the database.")
-
-        # Create the login dialog instance first
-        login_dialog = LoginDialog(task_manager, preferences_manager)
-
 
         if login_dialog.exec() == QDialog.DialogCode.Accepted:
             # Show the main window only if login is successful
             main_window.show()
             sys.exit(app.exec())
         else:
-            # Handle login failure (e.g., display an error message)
             print("Login failed.")
 
     except ValueError as e:
         print(f"Environment variable validation error: {e}")
-        # Handle the error appropriately (e.g., log it, inform the user, exit the application)
+        # Handle the error (e.g., log, inform the user, exit the application)
 
 
 if __name__ == "__main__":
