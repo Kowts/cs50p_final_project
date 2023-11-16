@@ -85,6 +85,7 @@ class TaskManager:
                 self.create_categories_table(conn)
                 self.create_users_table(conn)
                 self.create_preferences_table(conn)
+                self.create_user_activity_table(conn)
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
         except Exception as e:
@@ -160,6 +161,19 @@ class TaskManager:
                 value TEXT,
                 created_at TEXT,
                 status INTEGER DEFAULT 1
+            )
+        ''')
+
+    def create_user_activity_table(self, conn):
+        """Creates the tasks table in the database."""
+        # SQL command for creating the tasks table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_activity (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                type TEXT NOT NULL,  -- 'Login' or 'Logout'
+                created_at TEXT NOT NULL,
+                status TEXT  -- 'Success', 'Failure', or NULL for logout
             )
         ''')
 
@@ -345,12 +359,11 @@ class TaskManager:
             raise ValueError("Invalid username or password")
 
         try:
-            with utils.get_db_connection(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 hashed_password, salt = utils.hash_password(password)
                 created_at = utils.format_datetime(QDateTime.currentDateTime())
                 user_status = DefaultStatus.ACTIVE.value
-
                 cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)", (username, hashed_password, salt, created_at, user_status))
             return None
         except sqlite3.Error as e:
@@ -383,6 +396,27 @@ class TaskManager:
 
         except sqlite3.Error:
             return False
+
+    def log_user_activity(self, username, event_type, status=None):
+        """
+        Logs user activity (login/logout) to the database.
+
+        Args:
+            username: The username of the user.
+            event_type: Type of the event ('Login' or 'Logout').
+            status: The result of the login attempt ('Success' or 'Failure'), or None for logout.
+
+        Returns:
+            None if successful, an error message otherwise.
+        """
+        try:
+            with self.get_db_connection() as conn:
+                cursor = conn.cursor()
+                created_at = utils.format_datetime(QDateTime.currentDateTime())
+                cursor.execute("INSERT INTO user_activity (username, type, created_at, status) VALUES (?, ?, ?, ?)", (username, event_type, created_at, status))
+                return None
+        except sqlite3.Error as e:
+            return str(e)
 
     def add_task(self, task_name, due_date, priority, category):
         """
@@ -518,16 +552,18 @@ class TaskManager:
 
     def get_due_tasks(self):
         """
-        Retrieves tasks that are due on the current day.
+        Retrieves tasks that are due on the current day and have a specific status.
 
         Returns:
-            A list of task names due today, an empty list in case of an error.
+            A list of task names due today and with the specified status,
+            an empty list in case of an error.
         """
         today = datetime.date.today().strftime("%Y-%m-%d")
         try:
-            with utils.get_db_connection(self.db_file) as conn:
+            with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT name FROM tasks WHERE due_date = ?", (today,))
+                query = "SELECT name FROM tasks WHERE due_date = ? AND status = ?"
+                cursor.execute(query, (today, DefaultStatus.ACTIVE.value))
                 tasks = [row[0] for row in cursor.fetchall()]
                 logging.info(f"Tasks due today: {tasks}")
                 return tasks
