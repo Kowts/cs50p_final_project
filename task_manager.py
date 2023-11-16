@@ -559,11 +559,12 @@ class TaskManager:
             an empty list in case of an error.
         """
         today = datetime.date.today().strftime("%Y-%m-%d")
+        status = DefaultStatus.ACTIVE.value
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 query = "SELECT name FROM tasks WHERE due_date = ? AND status = ?"
-                cursor.execute(query, (today, DefaultStatus.ACTIVE.value))
+                cursor.execute(query, (today, status))
                 tasks = [row[0] for row in cursor.fetchall()]
                 logging.info(f"Tasks due today: {tasks}")
                 return tasks
