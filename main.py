@@ -5,7 +5,7 @@ import logging
 import markdown
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMarginsF
 from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
-from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout
+from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QCursor
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -76,21 +76,77 @@ class LoginDialog(QDialog):
             self.preferences_manager.load_and_apply_preferences()
 
         self.setWindowTitle("Login")
-        self.username_label = QLabel("Username:")
-        self.username_input = QLineEdit()
-        self.password_label = QLabel("Password:")
-        self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.login_button = QPushButton("Login")
-        self.login_button.clicked.connect(self.try_login)
+        self.setGeometry(600, 300, 400, 200)
+        # Set up the UI components here
+        self.init_ui()
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.username_label)
-        layout.addWidget(self.username_input)
-        layout.addWidget(self.password_label)
-        layout.addWidget(self.password_input)
-        layout.addWidget(self.login_button)
-        self.setLayout(layout)
+    def init_ui(self):
+
+        # Create a vertical layout
+        login_layout = QVBoxLayout()
+
+        # Create the LOGIN header label
+        login_title_label = QLabel("LOGIN")
+        login_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        login_title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #1d1f21;")
+        login_layout.addWidget(login_title_label)
+
+        # Username label and input
+        username_label = QLabel("Username")
+        login_layout.addWidget(username_label)
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Username")
+        self.username_input.setMinimumHeight(32)
+        login_layout.addWidget(self.username_input)
+
+        # Add vertical spacing and Adjust the number to increase or decrease the space
+        login_layout.addSpacing(12)
+
+        # Password label
+        password_label = QLabel("Password")
+        login_layout.addWidget(password_label)
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Password")
+        self.password_input.setMinimumHeight(32)
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        login_layout.addWidget(self.password_input)
+
+        # Create a horizontal layout for the button to center it
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()  # Spacer that will push the button towards the center
+
+        # Login button
+        self.login_button = QPushButton("Login")
+        self.login_button.setFixedWidth(100)
+        self.login_button.clicked.connect(self.try_login)
+        button_layout.addWidget(self.login_button)
+        button_layout.addStretch() # Add the horizontal layout to the main vertical layout
+        login_layout.addLayout(button_layout)
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(self.login_button)
+        button_layout.addStretch()
+
+        # Create a horizontal layout for the 'Create an Account' label
+        account_layout = QHBoxLayout()
+        account_layout.addStretch()
+        create_account_label = QLabel("<a href='#'>Create an Account</a>")
+        create_account_label.setStyleSheet("color: blue; text-decoration: underline;")
+        create_account_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        create_account_label.setOpenExternalLinks(False)  # Prevent opening links
+        create_account_label.linkActivated.connect(self.create_account)
+        account_layout.addWidget(create_account_label)
+        account_layout.addStretch()
+
+        # Add the horizontal layout to the main vertical layout
+        login_layout.addLayout(account_layout)
+
+        # Set the layout to the dialog
+        self.setLayout(login_layout)
+
+        # Set the "always on top" property based on the user's preference
+        if self.preferences_manager:
+            self.preferences_manager.load_and_apply_preferences()
 
     def try_login(self):
         MAX_ATTEMPTS = 3  # Maximum number of allowed attempts
@@ -119,6 +175,89 @@ class LoginDialog(QDialog):
         self.password_input.clear()
         self.failed_attempts = 0
 
+    def create_account(self):
+        registration_dialog = RegistrationDialog(self.task_manager)
+        registration_dialog.exec()
+
+class RegistrationDialog(QDialog):
+    def __init__(self, task_manager):
+        super().__init__()
+
+        self.task_manager = task_manager
+
+        self.setWindowTitle("Create Account")
+        self.setGeometry(600, 300, 400, 200)
+
+        layout = QVBoxLayout()
+
+        # Username label and input
+        username_label = QLabel("Username")
+        layout.addWidget(username_label)
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Username")
+        self.username_input.setMinimumHeight(32)
+        layout.addWidget(self.username_input)
+
+        # Add vertical spacing and Adjust the number to increase or decrease the space
+        layout.addSpacing(12)
+
+        # Password label
+        password_label = QLabel("Password/Repeat")
+        layout.addWidget(password_label)
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Password")
+        self.password_input.setMinimumHeight(32)
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addWidget(self.password_input)
+
+        # Repeat password field
+        self.password_repeat_input = QLineEdit()
+        self.password_repeat_input.setPlaceholderText("Repeat Password")
+        self.password_repeat_input.setMinimumHeight(32)
+        self.password_repeat_input.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addWidget(self.password_repeat_input)
+
+        # Create a horizontal layout for the button to center it
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()  # Spacer that will push the button towards the center
+
+        # Login button
+        self.register_button = QPushButton("Register")
+        self.register_button.setFixedWidth(100)
+        self.register_button.clicked.connect(self.register)
+        button_layout.addWidget(self.register_button)
+        button_layout.addStretch()  # Add the horizontal layout to the main vertical layout
+        layout.addLayout(button_layout)
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(self.register_button)
+        button_layout.addStretch()
+
+        self.setLayout(layout)
+
+    def register(self):
+        # Validate the inputs
+        username = self.username_input.text()
+        password = self.password_input.text()
+        password_repeat = self.password_repeat_input.text()
+
+        if not username or not password or not password_repeat:
+            QMessageBox.warning(self, "Incomplete", "Please fill out all fields.")
+            return
+
+        if password != password_repeat:
+            QMessageBox.warning(self, "Mismatch", "Passwords do not match.")
+            return
+
+        # Assuming task_manager has a method to create user
+        # You need to implement the user creation logic in task_manager
+        error_message = self.task_manager.create_user(username, password)
+        if error_message:
+            QMessageBox.critical(self, "Error", error_message)
+        else:
+            QMessageBox.information(self, "Success", "Account created successfully.")
+            self.accept()
+
 class MainWindow(QMainWindow):
     def __init__(self, task_manager, login_dialog):
         super().__init__()
@@ -142,6 +281,7 @@ class MainWindow(QMainWindow):
 
         # Setup UI components and load and apply preferences
         self.setup_ui()
+        self.hide()  # Hide the main window initially
         self.preferences_manager.load_and_apply_preferences()
 
         # Start the task tracker thread

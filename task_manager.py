@@ -122,6 +122,22 @@ class TaskManager:
             )
         ''')
 
+    def create_tasks_table(self, conn):
+        """Creates the tasks table in the database with a foreign key reference to the users table."""
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                name TEXT NOT NULL,
+                due_date TEXT,
+                priority TEXT,
+                category TEXT,
+                created_at TEXT,
+                status INTEGER,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+        ''')
+
     def create_priorities_table(self, conn):
         """
         Creates the priorities table and populates default values.
