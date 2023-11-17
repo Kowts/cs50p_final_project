@@ -1,17 +1,22 @@
+import re
 import sys
 import utils
 import logging
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QAction
+import markdown
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMarginsF
+from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
+from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
     QCheckBox,
+    QTextBrowser,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QTextEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -148,6 +153,9 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         self.centralWidget().setLayout(layout)
 
+        # Create a QTextEdit for displaying tasks
+        self.task_text_edit = QTextEdit()
+
         # Create task input fields and labels
         task_name_label = QLabel("Task Name:")
         self.task_name_input = QLineEdit()
@@ -210,12 +218,15 @@ class MainWindow(QMainWindow):
         remove_button.clicked.connect(self.remove_selected_task)
         edit_button = QPushButton("Edit Selected Task")
         edit_button.clicked.connect(self.edit_selected_task)
+        refresh_button = QPushButton("Refresh Task(s)")
+        refresh_button.clicked.connect(self.refresh_task)
 
         # Horizontal layout for buttons
         button_layout = QHBoxLayout()
         button_layout.addWidget(add_button)
         button_layout.addWidget(remove_button)
         button_layout.addWidget(edit_button)
+        button_layout.addWidget(refresh_button)
         layout.addLayout(button_layout)
 
         # Create and set up the task table
@@ -276,10 +287,32 @@ class MainWindow(QMainWindow):
         # Add a separator line
         file_menu.addSeparator()
 
+        # Create and add the Preview action
+        preview_action = QAction("Pre&view", self)
+        preview_action.triggered.connect(self.preview_data)
+        file_menu.addAction(preview_action)
+
+        # Add the Print action
+        print_action = QAction("&Print", self)
+        print_action.triggered.connect(self.print_data)
+        file_menu.addAction(print_action)
+
+        # Add a separator line
+        file_menu.addSeparator()
+
         # Add a "Logout" action
         logout_action = file_menu.addAction("Logout")
         logout_action.setShortcut("F12")
         logout_action.triggered.connect(self.logout)
+
+        # Add a Find action
+        find_action = QAction("&Find", self)
+        find_action.setShortcut("Ctrl+F")
+        find_action.triggered.connect(self.show_find_dialog)
+        data_menu.addAction(find_action)
+
+        # Add a separator line
+        data_menu.addSeparator()
 
         # Add "Add Priority" action
         add_priority_action = QAction("Add &Priority", self)
@@ -313,14 +346,83 @@ class MainWindow(QMainWindow):
         table_widget_container.layout().addWidget(self.task_table_widget)  # Changed here
         self.centralWidget().layout().addWidget(table_widget_container)  # Changed here
 
-
     def show_user_guide(self):
-        # Logic to display the user guide
-        QMessageBox.information(self, "User Guide", "Information about how to use the application.")
+        # Create the dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle("User Guide")
+        dialog.resize(650, 450)  # Set the dialog size
+
+        # Create a layout
+        layout = QVBoxLayout()
+
+        # Create a QTextBrowser widget to display HTML
+        text_browser = QTextBrowser(dialog)
+
+        # Read the README.md file content
+        with open('README.md', 'r', encoding='utf-8') as file:
+            readme_content = file.read()
+            # Convert Markdown content to HTML
+            html_content = markdown.markdown(readme_content)
+            # Set the HTML content to the text browser
+            text_browser.setHtml(html_content)
+
+        # Add the text browser to the layout
+        layout.addWidget(text_browser)
+
+        # Add a button box
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        # Close the dialog when OK is clicked
+        button_box.accepted.connect(dialog.accept)
+        layout.addWidget(button_box)
+
+        # Set the layout on the dialog
+        dialog.setLayout(layout)
+
+        # Execute the dialog
+        dialog.exec()
 
     def show_about_dialog(self):
-        # Logic to display the about dialog
-        QMessageBox.information(self, "About", "Your application version and details.")
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About Application")
+
+        layout = QVBoxLayout()
+
+        # Application title
+        title = QLabel("Task Manager")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+
+        # Version and other details
+        version = QLabel("Version 1.0.0")
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version)
+
+        copyright = QLabel("Copyright © 2023 Code Center")
+        copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(copyright)
+
+        # Developer
+        developer = QLabel("Developer - Joselito Coutinho")
+        developer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(developer)
+
+        # Contact
+        contact = QLabel("joselitocoutinho92@gmail.com")
+        contact.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(contact)
+
+        website = QLabel("<a href='https://www.codecenter.info/'>www.codecenter.info</a>")
+        website.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        website.setOpenExternalLinks(True)
+        layout.addWidget(website)
+
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        button_box.accepted.connect(dialog.accept)
+        layout.addWidget(button_box)
+
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def show_preferences_dialog(self):
         dialog = PreferencesDialog(self.task_manager, self.preferences_manager, self)
@@ -336,6 +438,11 @@ class MainWindow(QMainWindow):
         dialog.data_added.connect(self.update_dropdowns)
         dialog.exec()
 
+    def show_find_dialog(self):
+        self.find_dialog = FindDialog(self.task_text_edit, self.task_manager)
+        self.find_dialog.search_initiated.connect(self.search_database)
+        self.find_dialog.show()
+
     def update_dropdowns(self):
         # Refresh priority dropdown
         self.priority_combobox.clear()
@@ -346,6 +453,67 @@ class MainWindow(QMainWindow):
         self.category_combobox.clear()
         categories = self.task_manager.load_categories()
         self.category_combobox.addItems(categories)
+
+    def search_database(self, text, match_case, whole_word, use_regex):
+
+        # Perform the database search and update the table
+        # This method will need to construct a SQL query based on the search parameters
+        if not text:
+            # Optionally, alert the user that the search text is empty
+            return
+
+        # Establish a database connection
+        with self.task_manager.get_db_connection() as conn:
+
+            # If regex search is enabled, define a REGEXP function
+            if use_regex:
+                def regexp(expr, item):
+                    reg = re.compile(expr, re.IGNORECASE if not match_case else 0)
+                    return reg.search(item) is not None
+
+                conn.create_function("REGEXP", 2, regexp)
+                search_query = "SELECT * FROM tasks WHERE name REGEXP ? AND status = 1"
+                parameters = [text]
+            else:
+                like_clause = f"%{text}%"
+                search_query = "SELECT * FROM tasks WHERE name LIKE ? AND status = 1"
+                parameters = [like_clause]
+
+                if match_case:
+                    # Add COLLATE RTRIM to enforce case-sensitive search in SQLite
+                    search_query = "SELECT * FROM tasks WHERE name COLLATE RTRIM LIKE ? AND status = 1"
+
+                if whole_word:
+                    # SQLite does not natively support whole-word search, so you will need to use spaces
+                    # to attempt to match whole words (this is a simple workaround and may not be perfect)
+                    search_query = "SELECT * FROM tasks WHERE " \
+                                   "(name LIKE ? OR name LIKE ? OR name LIKE ? OR name = ?) AND status = 1"
+                    parameters = [f"{text} %", f"% {text}", f"% {text} %", text]
+
+            # Execute the query
+            try:
+                tasks = self.task_manager.custom_query(search_query, parameters, use_regex=use_regex)
+                self.update_table(tasks)
+            except Exception as e:
+                # Handle any exceptions that occur during the query
+                print(f"An error occurred: {e}")
+
+    def update_table(self, tasks):
+        # Update the table with the results
+        self.task_table_widget.setRowCount(0)  # Clear the table first
+        for task in tasks:
+            # Assuming a task is a tuple like (id, name, due_date, priority, category)
+            row_position = self.task_table_widget.rowCount()
+            self.task_table_widget.insertRow(row_position)
+
+            # Add items to the table
+            for column, task_data in enumerate(task):
+                item = QTableWidgetItem(str(task_data))
+                self.task_table_widget.setItem(row_position, column, item)
+
+        # Resize columns to fit content and update the style
+        self.task_table_widget.resizeColumnsToContents()
+        self.apply_table_style()
 
     def clear_entries(self):
         self.task_name_input.clear()
@@ -503,6 +671,11 @@ class MainWindow(QMainWindow):
         # Set the size policy again to make sure it's effective
         self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
+    # Function to refreh the task list
+    def refresh_task(self):
+        self.update_task_list()
+        self.clear_entries()
+
     def logout(self):
         # Assuming self.username stores the username of the logged-in user
         if hasattr(self, 'username'):
@@ -553,6 +726,82 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, "Import Successful", message)
             except Exception as e:
                 QMessageBox.critical(self, "Import Failed", f"An error occurred while importing tasks: {e}")
+
+    def preview_data(self):
+
+        # Create a QPrinter object
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+        printer.setPageOrientation(QPageLayout.Orientation.Landscape)
+
+        # Set the page margins
+        margins = QMarginsF(12, 12, 12, 12)  # Set the margins to 12mm
+        pageLayout = QPageLayout(QPageSize(QPageSize.PageSizeId.A4), QPageLayout.Orientation.Landscape, margins)
+        printer.setPageLayout(pageLayout)
+
+        # Create the preview dialog
+        preview_dialog = QPrintPreviewDialog(printer, self)
+        preview_dialog.setWindowTitle("Preview")
+
+        # Connect the paint request to a method that will draw the content
+        preview_dialog.paintRequested.connect(self.print_preview)
+
+        # Show the dialog
+        preview_dialog.exec()
+
+    def print_preview(self, printer):
+        # This method should render the table data
+        # Prepare the document content (this is where you format your table data)
+        content = self.format_table_data_for_printing()
+
+        # Create a text document and set its content
+        document = QTextDocument()
+        document.setHtml(content)
+
+        # Print the document to the printer (which is connected to the preview dialog)
+        document.print(printer)
+
+    def format_table_data_for_printing(self):
+        # Retrieve the list of tasks using the task manager
+        tasks = self.task_manager.list_tasks()
+
+        # Initialize an HTML string to hold the formatted data
+        formatted_data = "<html><head><style>"
+        formatted_data += "body {margin: 0; padding: 0;}"
+        formatted_data += "table {width: 100%; table-layout: fixed; border-collapse: collapse;}"
+        formatted_data += "th, td {border: 1px solid black; padding: 5px; text-align: left;}"
+        formatted_data += "@page{size: A4 landscape;margin: 12mm 12mm 12mm 12mm;}"
+        formatted_data += "</style></head><body>"
+        formatted_data += "<table>"  # Start the table
+
+        # Add table header (adjust the headers as per your task attributes)
+        formatted_data += "<tr><th>Name</th><th>Due Date</th><th>Priority</th><th>Category</th></tr>"
+
+        # Loop through the tasks and create HTML table rows
+        for task in tasks:
+            if task:  # Assuming the first element indicates an 'Active' status
+                formatted_data += "<tr>"
+                formatted_data += f"<td>{task[1]}</td>"  # Task Name
+                formatted_data += f"<td>{task[2]}</td>"  # Due Date
+                formatted_data += f"<td>{task[3]}</td>"  # Priority
+                formatted_data += f"<td>{task[4]}</td>"  # Category
+                formatted_data += "</tr>"
+
+        # Close the table and HTML tags
+        formatted_data += "</table></body></html>"
+
+        # Return the HTML formatted data for all active tasks
+        return formatted_data
+
+    def print_data(self):
+        # This slot is called when the Print action is triggered
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        print_dialog = QPrintDialog(printer, self)
+
+        # If the user accepts the print dialog, proceed to print
+        if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
+            self.print_preview(printer)
+
 
 class EditTaskDialog(QDialog):
     def __init__(self, task_details, task_manager):
@@ -643,6 +892,10 @@ class PreferencesDialog(QDialog):
         layout.addWidget(QLabel("Font Size:"))
         layout.addWidget(self.font_size_selector)
 
+        # Create a checkbox for the "Always on Top" setting
+        self.always_on_top_checkbox = QCheckBox("Always on Top", self)
+        layout.addWidget(self.always_on_top_checkbox)
+
         # OK and Cancel buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Close)
         button_box.accepted.connect(self.save_preferences)
@@ -657,18 +910,22 @@ class PreferencesDialog(QDialog):
         theme = self.theme_selector.currentText()
         enable_notifications = self.notification_checkbox.isChecked()
         font_size = self.font_size_selector.currentText()
+        always_on_top = self.always_on_top_checkbox.isChecked()
+
 
         # Save preferences
         self.task_manager.save_preferences({
             'theme': theme,
             'enable_notifications': str(enable_notifications),
-            'font_size': font_size
+            'font_size': font_size,
+            'always_on_top': str(always_on_top)
         })
 
         # Apply preferences immediately
         self.preferences_manager.apply_theme(theme)
         self.preferences_manager.apply_notification_setting(enable_notifications)
         self.preferences_manager.apply_font_size(font_size)
+        self.preferences_manager.apply_always_on_top(always_on_top)
 
         # Send notification about successful save
         utils.send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.", self.task_manager)
@@ -693,6 +950,11 @@ class PreferencesDialog(QDialog):
         index = self.theme_selector.findText(saved_theme) # Find the index of the saved theme in the combo box and set it
         if index >= 0:
             self.theme_selector.setCurrentIndex(index)
+
+        # Convert the preference string to a boolean
+        always_on_top = preferences.get('always_on_top', 'False')  # Default to 'False' if not found
+        always_on_top_bool = always_on_top.lower() == 'true'  # Convert to boolean
+        self.always_on_top_checkbox.setChecked(always_on_top_bool)
 
 class AddDataDialog(QDialog):
 
@@ -733,6 +995,65 @@ class AddDataDialog(QDialog):
                 self.accept()
             else:
                 QMessageBox.warning(self, "Exists", f"{self.data_type.capitalize()} '{data}' already exists.")
+
+class FindDialog(QDialog):
+
+    # Signal with the search parameters
+    search_initiated = pyqtSignal(str, bool, bool, bool)
+
+    def __init__(self, text_widget, task_manager):
+        super().__init__()
+        self.text_widget = text_widget
+        self.task_manager = task_manager
+        self.init_ui()
+        self.setWindowTitle("Find")
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        # Search text input
+        self.find_what_label = QLabel("What:")
+        self.find_what_input = QLineEdit()
+        layout.addWidget(self.find_what_label)
+        layout.addWidget(self.find_what_input)
+
+        # Match case checkbox
+        self.match_case_checkbox = QCheckBox("Match case")
+        layout.addWidget(self.match_case_checkbox)
+
+        # Whole word checkbox
+        self.whole_word_checkbox = QCheckBox("Whole word")
+        layout.addWidget(self.whole_word_checkbox)
+
+        # Regular expressions checkbox
+        self.regular_expression_checkbox = QCheckBox("Regular expressions")
+        layout.addWidget(self.regular_expression_checkbox)
+
+        # Find and Cancel buttons
+        self.find_button = QPushButton("Find next")
+        self.find_button.clicked.connect(self.find_next)
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addWidget(self.find_button)
+        buttons_layout.addWidget(self.cancel_button)
+        layout.addLayout(buttons_layout)
+
+        self.setLayout(layout)
+
+    def find_next(self):
+
+        search_text = self.find_what_input.text()
+        if not search_text:
+            return
+
+        text = self.find_what_input.text()
+        match_case = self.match_case_checkbox.isChecked()
+        whole_word = self.whole_word_checkbox.isChecked()
+        use_regex = self.regular_expression_checkbox.isChecked()
+
+        # Emit the search_initiated signal instead of performing a find on the text widget
+        self.search_initiated.emit(text, match_case, whole_word, use_regex)
 
 def main():
     app = QApplication(sys.argv)

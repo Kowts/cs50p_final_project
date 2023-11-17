@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import sqlite3, utils
 from PyQt6.QtCore import QDateTime
@@ -91,6 +92,20 @@ class TaskManager:
         except Exception as e:
             logging.error(f"An error occurred: {e}")
 
+    def custom_query(self, query, parameters, use_regex=False):
+        try:
+            with self.get_db_connection() as conn:
+                if use_regex:
+                    def regexp(expr, item):
+                        reg = re.compile(expr)
+                        return reg.search(item) is not None
+                    conn.create_function("REGEXP", 2, regexp)
+                cursor = conn.cursor()
+                cursor.execute(query, parameters)
+                return cursor.fetchall()
+        except sqlite3.DatabaseError as e:
+            # Handle the error
+            return []
 
     def create_tasks_table(self, conn):
         """Creates the tasks table in the database."""

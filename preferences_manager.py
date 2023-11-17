@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import Qt, QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 from qt_material import apply_stylesheet
 
@@ -67,6 +67,33 @@ class PreferencesManager(QObject):
         font.setPointSize(int(font_size.replace('pt', '')))
         QApplication.instance().setFont(font)
 
+    def apply_always_on_top(self, always_on_top):
+
+        if always_on_top:
+            self.main_window.setWindowFlag(
+                Qt.WindowType.WindowStaysOnTopHint, True)
+        else:
+            self.main_window.setWindowFlag(
+                Qt.WindowType.WindowStaysOnTopHint, False)
+
+    def apply_always_on_top(self, always_on_top):
+        # Convert always_on_top to boolean if it's a string
+        always_on_top_bool = always_on_top.lower() == 'true' if isinstance(always_on_top, str) else always_on_top
+
+        # Check if the main window is currently visible
+        is_visible = self.main_window.isVisible()
+
+        # Apply the 'Always on Top' setting
+        try:
+            self.main_window.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, always_on_top_bool)
+
+            if is_visible:
+                # Hide and show the window only if it was already visible
+                self.main_window.hide()  # Necessary to reapply the window flags
+                self.main_window.show()  # Re-show the window to apply the change
+        except Exception as e:
+            print("An error occurred while setting Always on Top:", e)
+
     def load_and_apply_preferences(self):
         """Loads user preferences from the task manager and applies them."""
         # Retrieve preferences from the task manager
@@ -76,3 +103,4 @@ class PreferencesManager(QObject):
         self.apply_theme(preferences.get('theme', 'Light'))
         self.apply_notification_setting(preferences.get('enable_notifications', True))
         self.apply_font_size(preferences.get('font_size', '10'))
+        self.apply_always_on_top(preferences.get('always_on_top', False))

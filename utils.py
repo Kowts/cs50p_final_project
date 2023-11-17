@@ -20,9 +20,7 @@ def setup_logging(level=logging.DEBUG, filename='app.log'):
         level: The logging level (e.g., DEBUG, INFO).
         filename: The name of the file where logs will be stored.
     """
-    logging.basicConfig(level=level, filename=filename,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-
+    logging.basicConfig(level=level, filename=filename, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_db_connection(db_file):
     """
