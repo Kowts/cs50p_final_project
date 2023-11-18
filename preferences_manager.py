@@ -22,7 +22,7 @@ class PreferencesManager(QObject):
         self.main_window = main_window
         self.task_manager = task_manager
 
-    def apply_theme(self, theme_name):
+    def apply_theme(self, theme_name, font_size):
         """Applies a theme to the application based on the user's preference.
 
         Args:
@@ -30,18 +30,27 @@ class PreferencesManager(QObject):
         """
         app = QApplication.instance()
 
+        # Convert the font size to a string with 'px' suffix
+        font_size_px = f'{font_size}px'
+        extra = {
+            'font_size': font_size_px,
+        }
+
         if theme_name == 'Dark':
             # Apply a dark theme with blue accents
-            apply_stylesheet(app, theme='dark_blue.xml')
+            apply_stylesheet(app, theme='dark_blue.xml', extra=extra)
         elif theme_name == 'Light':
             # Apply a light theme with blue accents and inverted secondary colors
-            apply_stylesheet(app, theme='light_blue.xml', invert_secondary=True)
+            apply_stylesheet(app, theme='light_blue.xml', extra=extra, invert_secondary=True)
         elif theme_name == 'Default':
             # Reset to the application's default theme
             app.setStyleSheet(DEFAULT_STYLESHEET)
         else:
             # Handle other themes or reset to default if an unknown theme is passed
             app.setStyleSheet("")  # Fallback to PyQt's built-in styles
+
+        # Apply the font size at the end
+        self.apply_font_size(font_size)
 
         # Emit the theme_changed signal
         self.theme_changed.emit()
@@ -99,8 +108,10 @@ class PreferencesManager(QObject):
         # Retrieve preferences from the task manager
         preferences = self.task_manager.get_preferences()
 
+        font_size = preferences.get('font_size', '10')
+
         # Apply each preference
-        self.apply_theme(preferences.get('theme', 'Light'))
+        self.apply_theme(preferences.get('theme', 'Light'), font_size)
+        self.apply_font_size(font_size)
         self.apply_notification_setting(preferences.get('enable_notifications', True))
-        self.apply_font_size(preferences.get('font_size', '10'))
         self.apply_always_on_top(preferences.get('always_on_top', False))

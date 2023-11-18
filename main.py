@@ -62,10 +62,11 @@ class TaskTracker(QThread):
                 logging.info("No tasks due today.")
 
 class LoginDialog(QDialog):
-    def __init__(self, task_manager, preferences_manager=None):
+    def __init__(self, task_manager, main_window, preferences_manager=None):
         super().__init__()
 
         self.task_manager = task_manager
+        self.main_window = main_window
         self.preferences_manager = preferences_manager
 
         # Counter for failed login attempts
@@ -154,8 +155,11 @@ class LoginDialog(QDialog):
         username = self.username_input.text()
         password = self.password_input.text()
 
-        if self.task_manager.verify_user(username, password):
+        valid_login, user_id = self.task_manager.verify_user(username, password)
+        if valid_login:
             self.accept()  # Successful login
+            print("user_id: ", user_id)
+            self.user_id = user_id  # Store the user_id in the LoginDialog
             self.task_manager.log_user_activity(username, "Login", "Success")
         else:
             self.task_manager.log_user_activity(username, "Login", "Failure")
@@ -166,6 +170,9 @@ class LoginDialog(QDialog):
             else:
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
                 QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
+
+    def get_user_id(self):
+        return self.user_id
 
     def reset_login_dialog(self):
         """
@@ -250,7 +257,7 @@ class RegistrationDialog(QDialog):
             return
 
         # Assuming task_manager has a method to create user
-        # You need to implement the user creation logic in task_manager
+        # Implement the user creation logic in task_manager
         error_message = self.task_manager.create_user(username, password)
         if error_message:
             QMessageBox.critical(self, "Error", error_message)
@@ -259,8 +266,11 @@ class RegistrationDialog(QDialog):
             self.accept()
 
 class MainWindow(QMainWindow):
-    def __init__(self, task_manager, login_dialog):
+    def __init__(self, task_manager, login_dialog, user_id=None):
         super().__init__()
+
+        self.user_id = user_id  # Initialize user_id
+        print(f"User ID: {self.user_id}")
 
         self.app = QApplication.instance() # Reference to the QApplication instance
         self.task_manager = task_manager
@@ -377,6 +387,16 @@ class MainWindow(QMainWindow):
         # Update the task list to populate the table and menu
         self.update_task_list()
         self.setup_menu_widget()
+
+    def set_attribute(self, attribute_name, value):
+        """
+        Dynamically sets a user attribute.
+
+        Args:
+            attribute_name (str): Name of the attribute to set.
+            value: The value to assign to the attribute.
+        """
+        setattr(self, attribute_name, value)
 
     def show_date_picker(self):
         if self.date_picker_dialog.exec() == QDialog.DialogCode.Accepted:
@@ -612,23 +632,23 @@ class MainWindow(QMainWindow):
                     return reg.search(item) is not None
 
                 conn.create_function("REGEXP", 2, regexp)
-                search_query = "SELECT * FROM tasks WHERE name REGEXP ? AND status = 1"
-                parameters = [text]
+                search_query = "SELECT name, due_date, priority, category FROM tasks WHERE user_id = ? AND name REGEXP ? AND status = 1"
+                parameters = [self.user_id, text]
             else:
                 like_clause = f"%{text}%"
-                search_query = "SELECT * FROM tasks WHERE name LIKE ? AND status = 1"
-                parameters = [like_clause]
+                search_query = "SELECT name, due_date, priority, category FROM tasks WHERE user_id = ? AND name LIKE ? AND status = 1"
+                parameters = [self.user_id, like_clause]
 
                 if match_case:
                     # Add COLLATE RTRIM to enforce case-sensitive search in SQLite
-                    search_query = "SELECT * FROM tasks WHERE name COLLATE RTRIM LIKE ? AND status = 1"
+                    search_query = "SELECT name, due_date, priority, category FROM tasks WHERE user_id = ? AND name COLLATE RTRIM LIKE ? AND status = 1"
 
                 if whole_word:
-                    # SQLite does not natively support whole-word search, so you will need to use spaces
+                    # SQLite does not natively support whole-word search, so will use spaces
                     # to attempt to match whole words (this is a simple workaround and may not be perfect)
-                    search_query = "SELECT * FROM tasks WHERE " \
-                                   "(name LIKE ? OR name LIKE ? OR name LIKE ? OR name = ?) AND status = 1"
-                    parameters = [f"{text} %", f"% {text}", f"% {text} %", text]
+                    search_query = "SELECT name, due_date, priority, category FROM tasks WHERE " \
+                                "user_id = ? AND (name LIKE ? OR name LIKE ? OR name LIKE ? OR name = ?) AND status = 1"
+                    parameters = (self.user_id, f"{text} %", f"% {text}", f"% {text} %", text)
 
             # Execute the query
             try:
@@ -681,7 +701,7 @@ class MainWindow(QMainWindow):
         )
 
         # Add the task to the database
-        error_message, task_id = self.task_manager.add_task(*task)
+        error_message, task_id = self.task_manager.add_task(self.user_id, *task)
 
         if error_message:
             utils.show_error("Task Addition Error", error_message)
@@ -764,52 +784,66 @@ class MainWindow(QMainWindow):
 
     # Function to update the task list
     def update_task_list(self):
-        tasks = self.task_manager.list_tasks()
+        print("Attempting to update task list for user_id: %s", self.user_id)
+        if self.user_id is None:
+            print("User ID is None. Cannot update task list without a valid user ID.")
+            return
 
-        # Sort tasks by due date in ascending order (earliest due date first)
-        tasks.sort(key=lambda task: task[1])  # Assuming task[1] is the due date
+        # Retrieve the list of tasks using the task manager
+        try:
 
-        # Reverse the order to get highest due date first
-        tasks.reverse()
+            tasks = self.task_manager.list_tasks(self.user_id)
+            if not tasks:
+                print("No tasks found for user_id: %s", self.user_id)
+                return
 
-        # Clear the existing task_row_to_id dictionary and the table
-        task_row_to_id.clear()
-        self.task_table_widget.setRowCount(len(tasks))
+            # Sort tasks by due date in ascending order (earliest due date first)
+            tasks.sort(key=lambda task: task[1])  # Assuming task[1] is the due date
 
-        for row, task in enumerate(tasks):
-            # Assuming the task tuple is structured as (id, name, due_date, priority, category)
-            task_id = task[0]
-            name_item = QTableWidgetItem(task[1])
-            due_date_item = QTableWidgetItem(task[2])
-            priority_item = QTableWidgetItem(task[3])
-            category_item = QTableWidgetItem(task[4])
+            # Reverse the order to get highest due date first
+            tasks.reverse()
 
-            # Set text alignment to left
-            name_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            due_date_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            priority_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            category_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            # Clear the existing task_row_to_id dictionary and the table
+            task_row_to_id.clear()
+            self.task_table_widget.setRowCount(len(tasks))
 
-            # Set item flags to make cells read-only
-            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            due_date_item.setFlags(due_date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            priority_item.setFlags(priority_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            category_item.setFlags(category_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            for row, task in enumerate(tasks):
+                # Assuming the task tuple is structured as (id, name, due_date, priority, category)
+                task_id = task[0]
+                name_item = QTableWidgetItem(task[1])
+                due_date_item = QTableWidgetItem(task[2])
+                priority_item = QTableWidgetItem(task[3])
+                category_item = QTableWidgetItem(task[4])
 
-            # Set items in the table
-            self.task_table_widget.setItem(row, 0, name_item)
-            self.task_table_widget.setItem(row, 1, due_date_item)
-            self.task_table_widget.setItem(row, 2, priority_item)
-            self.task_table_widget.setItem(row, 3, category_item)
+                # Set text alignment to left
+                name_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                due_date_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                priority_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                category_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
-            # Populate the task ID to row mapping
-            task_row_to_id[row] = task_id  # Map row index to task ID
+                # Set item flags to make cells read-only
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                due_date_item.setFlags(due_date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                priority_item.setFlags(priority_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                category_item.setFlags(category_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-        self.task_table_widget.resizeColumnsToContents()
-        self.apply_table_style()  # Apply the table style after updating
+                # Set items in the table
+                self.task_table_widget.setItem(row, 0, name_item)
+                self.task_table_widget.setItem(row, 1, due_date_item)
+                self.task_table_widget.setItem(row, 2, priority_item)
+                self.task_table_widget.setItem(row, 3, category_item)
 
-        # Set the size policy again to make sure it's effective
-        self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+                # Populate the task ID to row mapping
+                task_row_to_id[row] = task_id  # Map row index to task ID
+
+            self.task_table_widget.resizeColumnsToContents()
+            self.apply_table_style()  # Apply the table style after updating
+
+            # Set the size policy again to make sure it's effective
+            self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        except Exception as e:
+            logging.error("An error occurred while updating task list: %s", e)
 
     # Function to refreh the task list
     def refresh_task(self):
@@ -850,7 +884,7 @@ class MainWindow(QMainWindow):
             self, "Export Tasks", "", "CSV Files (*.csv)")
         if file_name:
             try:
-                message = self.task_manager.export_tasks(file_name)
+                message = self.task_manager.export_tasks(file_name, self.user_id)
                 utils.send_windows_notification("Export Successful", message, self.task_manager)
 
             except Exception as e:
@@ -860,7 +894,7 @@ class MainWindow(QMainWindow):
         file_name, _ = QFileDialog.getOpenFileName(self, "Import Tasks", "", "CSV Files (*.csv)")
         if file_name:
             try:
-                message = self.task_manager.import_tasks(file_name)
+                message = self.task_manager.import_tasks(file_name, self.user_id)
                 # Refresh the task list in the UI
                 self.update_task_list()
                 QMessageBox.information(self, "Import Successful", message)
@@ -891,7 +925,7 @@ class MainWindow(QMainWindow):
 
     def print_preview(self, printer):
         # This method should render the table data
-        # Prepare the document content (this is where you format your table data)
+        # Prepare the document content
         content = self.format_table_data_for_printing()
 
         # Create a text document and set its content
@@ -903,7 +937,7 @@ class MainWindow(QMainWindow):
 
     def format_table_data_for_printing(self):
         # Retrieve the list of tasks using the task manager
-        tasks = self.task_manager.list_tasks()
+        tasks = self.task_manager.list_tasks(self.user_id)
 
         # Initialize an HTML string to hold the formatted data
         formatted_data = "<html><head><style>"
@@ -941,8 +975,6 @@ class MainWindow(QMainWindow):
         # If the user accepts the print dialog, proceed to print
         if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
             self.print_preview(printer)
-
-
 class EditTaskDialog(QDialog):
     def __init__(self, task_details, task_manager):
         super().__init__()
@@ -1001,7 +1033,6 @@ class EditTaskDialog(QDialog):
         priority = self.priority_combobox.currentText()
         category = self.category_combobox.currentText()
         return (name, due_date, priority, category)
-
 class PreferencesDialog(QDialog):
     def __init__(self, task_manager, preferences_manager, parent=None):
         super().__init__(parent)
@@ -1062,7 +1093,7 @@ class PreferencesDialog(QDialog):
         })
 
         # Apply preferences immediately
-        self.preferences_manager.apply_theme(theme)
+        self.preferences_manager.apply_theme(theme, font_size)
         self.preferences_manager.apply_notification_setting(enable_notifications)
         self.preferences_manager.apply_font_size(font_size)
         self.preferences_manager.apply_always_on_top(always_on_top)
@@ -1095,7 +1126,6 @@ class PreferencesDialog(QDialog):
         always_on_top = preferences.get('always_on_top', 'False')  # Default to 'False' if not found
         always_on_top_bool = always_on_top.lower() == 'true'  # Convert to boolean
         self.always_on_top_checkbox.setChecked(always_on_top_bool)
-
 class AddDataDialog(QDialog):
 
     data_added = pyqtSignal()  # Signal to notify that new data was added
@@ -1135,7 +1165,6 @@ class AddDataDialog(QDialog):
                 self.accept()
             else:
                 QMessageBox.warning(self, "Exists", f"{self.data_type.capitalize()} '{data}' already exists.")
-
 class FindDialog(QDialog):
 
     # Signal with the search parameters
@@ -1202,16 +1231,19 @@ def main():
         # Create an instance of TaskManager
         task_manager = TaskManager()
 
-        # Create the login dialog instance without preferences_manager
-        login_dialog = LoginDialog(task_manager)
+        # Initialize MainWindow with task_manager
+        main_window = MainWindow(task_manager, login_dialog=None)
 
-        # Initialize MainWindow with task_manager and login_dialog
-        main_window = MainWindow(task_manager, login_dialog)
+        # Create the login dialog instance with main_window
+        login_dialog = LoginDialog(task_manager, main_window)
+
+        # Set the login_dialog attribute in main_window
+        main_window.login_dialog = login_dialog
 
         # Initialize PreferencesManager with main_window and task_manager
         preferences_manager = PreferencesManager(main_window, task_manager)
 
-        # Now set preferences_manager in login_dialog
+        # Set preferences_manager in login_dialog
         login_dialog.preferences_manager = preferences_manager
 
         # Check if there are existing users
@@ -1223,13 +1255,14 @@ def main():
             if error_message:
                 utils.show_error("User Creation Error", error_message)
             else:
-                print(
-                    f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
+                print(f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
         else:
             print("Users already exist in the database.")
 
         if login_dialog.exec() == QDialog.DialogCode.Accepted:
             # Show the main window only if login is successful
+            user_id = login_dialog.get_user_id()  # Retrieve the user_id
+            main_window = MainWindow(task_manager, login_dialog, user_id)
             main_window.show()
             sys.exit(app.exec())
         else:

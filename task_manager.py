@@ -81,10 +81,10 @@ class TaskManager:
         try:
             # Establish database connection and create tables
             with self.get_db_connection() as conn:
+                self.create_users_table(conn)
                 self.create_tasks_table(conn)
                 self.create_priorities_table(conn)
                 self.create_categories_table(conn)
-                self.create_users_table(conn)
                 self.create_preferences_table(conn)
                 self.create_user_activity_table(conn)
         except sqlite3.DatabaseError as e:
@@ -107,18 +107,18 @@ class TaskManager:
             # Handle the error
             return []
 
-    def create_tasks_table(self, conn):
-        """Creates the tasks table in the database."""
-        # SQL command for creating the tasks table
+    def create_users_table(self, conn):
+        """
+        Creates the users table in the database.
+        """
         conn.execute('''
-            CREATE TABLE IF NOT EXISTS tasks (
+            CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                due_date TEXT,
-                priority TEXT,
-                category TEXT,
-                created_at TEXT,
-                status INTEGER
+                username TEXT NOT NULL,
+                password TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                status INTEGER DEFAULT 1
             )
         ''')
 
@@ -145,9 +145,11 @@ class TaskManager:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS priorities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 name TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                status INTEGER DEFAULT 1
+                status INTEGER DEFAULT 1,
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
         self.insert_default_priorities(conn)
@@ -159,27 +161,14 @@ class TaskManager:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 name TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                status INTEGER DEFAULT 1
+                status INTEGER DEFAULT 1,
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
         self.insert_default_categories(conn)
-
-    def create_users_table(self, conn):
-        """
-        Creates the users table in the database.
-        """
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                password TEXT NOT NULL,
-                salt TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                status INTEGER DEFAULT 1
-            )
-        ''')
 
     def create_preferences_table(self, conn):
         """
@@ -188,10 +177,12 @@ class TaskManager:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS preferences (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 key TEXT UNIQUE,
                 value TEXT,
                 created_at TEXT,
-                status INTEGER DEFAULT 1
+                status INTEGER DEFAULT 1,
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
 
@@ -414,15 +405,15 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT password, salt FROM users WHERE username = ?", (username,))
+                cursor.execute("SELECT id, password, salt FROM users WHERE username = ?", (username,))
                 stored_data = cursor.fetchone()
 
                 if stored_data:
-                    stored_hashed_password, salt = stored_data
+                    user_id, stored_hashed_password, salt = stored_data
                     hashed_password, _ = utils.hash_password(password, salt)
 
                     if stored_hashed_password == hashed_password:
-                        return True
+                        return True, user_id
                 return False
 
         except sqlite3.Error:
@@ -449,11 +440,12 @@ class TaskManager:
         except sqlite3.Error as e:
             return str(e)
 
-    def add_task(self, task_name, due_date, priority, category):
+    def add_task(self, user_id, task_name, due_date, priority, category):
         """
         Adds a new task to the database.
 
         Args:
+            user_id: The id of the user.
             task_name: The name of the task.
             due_date: The due date of the task.
             priority: The priority of the task.
@@ -470,8 +462,8 @@ class TaskManager:
                 cursor = conn.cursor()
                 created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor.execute(
-                    "INSERT INTO tasks (name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
-                    (task_name, due_date, priority, category, created_at, DefaultStatus.ACTIVE.value)
+                    "INSERT INTO tasks (user_id, name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, task_name, due_date, priority,category, created_at, DefaultStatus.ACTIVE.value)
                 )
                 task_id = cursor.lastrowid
             return None, task_id
@@ -520,11 +512,12 @@ class TaskManager:
             logging.error(f"Database error while retrieving task details: {e}")
             return None
 
-    def list_tasks(self, status=None):
+    def list_tasks(self, user_id, status=None):
         """
         Lists tasks based on their status.
 
         Args:
+            user_id: The ID of the user.
             status: The status of the tasks to list. If None, lists active tasks.
 
         Returns:
@@ -533,8 +526,8 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                query = 'SELECT id, name, due_date, priority, category FROM tasks WHERE status = ?'
-                cursor.execute(query, (status or DefaultStatus.ACTIVE.value,))
+                query = 'SELECT id, name, due_date, priority, category FROM tasks WHERE user_id = ? and status = ?'
+                cursor.execute(query, (user_id, status or DefaultStatus.ACTIVE.value))
                 return cursor.fetchall()  # Returns a list of tasks
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
@@ -606,7 +599,7 @@ class TaskManager:
             logging.error(f"An error occurred: {e}")
             return []
 
-    def export_tasks(self, file_path):
+    def export_tasks(self, file_path, user_id):
         """
         Exports active tasks to a CSV file.
 
@@ -619,7 +612,7 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT * FROM tasks WHERE status = ?', (DefaultStatus.ACTIVE.value,))
+                cursor.execute('SELECT * FROM tasks WHERE user_id = ? AND status = ?', (user_id, DefaultStatus.ACTIVE.value))
                 tasks = cursor.fetchall()
 
             with open(file_path, mode='w', newline='', encoding='utf-8') as file:
@@ -632,7 +625,7 @@ class TaskManager:
         except Exception as e:
             return f"Error exporting tasks: {e}"  # Return error message in case of failure
 
-    def import_tasks(self, file_name):
+    def import_tasks(self, file_name, user_id):
         """
         Imports tasks from a CSV file into the database.
 
@@ -651,6 +644,7 @@ class TaskManager:
                     for row in reader:
                         # Ensure each row has the required number of elements
                         if len(row) >= 5:
+                            print(row)
                             task_name, due_date, priority, category = row[1:5]
 
                             # Validate the task name
@@ -660,9 +654,8 @@ class TaskManager:
                             # Prepare other task details and insert into the database
                             created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                             cursor.execute(
-                                "INSERT INTO tasks (name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
-                                (task_name, due_date, priority, category,
-                                created_at, DefaultStatus.ACTIVE.value)
+                                "INSERT INTO tasks (user_id, name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                (user_id, task_name, due_date, priority,category, created_at, DefaultStatus.ACTIVE.value)
                             )
                         else:
                             print(f"Skipping incomplete row: {row}")
