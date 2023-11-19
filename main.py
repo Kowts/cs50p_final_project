@@ -158,7 +158,6 @@ class LoginDialog(QDialog):
         valid_login, user_id = self.task_manager.verify_user(username, password)
         if valid_login:
             self.accept()  # Successful login
-            print("user_id: ", user_id)
             self.user_id = user_id  # Store the user_id in the LoginDialog
             self.task_manager.log_user_activity(username, "Login", "Success")
         else:
@@ -270,7 +269,6 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.user_id = user_id  # Initialize user_id
-        print(f"User ID: {self.user_id}")
 
         self.app = QApplication.instance() # Reference to the QApplication instance
         self.task_manager = task_manager
@@ -656,7 +654,7 @@ class MainWindow(QMainWindow):
                 self.update_table(tasks)
             except Exception as e:
                 # Handle any exceptions that occur during the query
-                print(f"An error occurred: {e}")
+                logging.error(f"An error occurred: {e}")
 
     def update_table(self, tasks):
         # Update the table with the results
@@ -784,17 +782,14 @@ class MainWindow(QMainWindow):
 
     # Function to update the task list
     def update_task_list(self):
-        print("Attempting to update task list for user_id: %s", self.user_id)
         if self.user_id is None:
-            print("User ID is None. Cannot update task list without a valid user ID.")
+            logging.error("User ID is None. Cannot update task list without a valid user ID.")
             return
-
         # Retrieve the list of tasks using the task manager
         try:
-
             tasks = self.task_manager.list_tasks(self.user_id)
             if not tasks:
-                print("No tasks found for user_id: %s", self.user_id)
+                logging.error("No tasks found for user_id: %s", self.user_id)
                 return
 
             # Sort tasks by due date in ascending order (earliest due date first)
@@ -858,7 +853,7 @@ class MainWindow(QMainWindow):
 
             if logout_status is not None:
                 # Handle any errors in logging the logout event, if necessary
-                print(f"Error logging logout: {logout_status}")
+                logging.error(f"Error logging logout: {logout_status}")
 
         # Close the session
         self.close()
@@ -1048,7 +1043,7 @@ class PreferencesDialog(QDialog):
 
         # setting: Theme Selector
         self.theme_selector = QComboBox()
-        self.theme_selector.addItems(["Light", "Dark", "Default"])
+        self.theme_selector.addItems(["Default", "Light", "Dark"])
         layout.addWidget(QLabel("Select Theme:"))
         layout.addWidget(self.theme_selector)
 
@@ -1255,9 +1250,9 @@ def main():
             if error_message:
                 utils.show_error("User Creation Error", error_message)
             else:
-                print(f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
+                logging.info(f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
         else:
-            print("Users already exist in the database.")
+            logging.warning("Users already exist in the database.")
 
         if login_dialog.exec() == QDialog.DialogCode.Accepted:
             # Show the main window only if login is successful
@@ -1266,10 +1261,10 @@ def main():
             main_window.show()
             sys.exit(app.exec())
         else:
-            print("Login failed.")
+            logging.error("Login failed.")
 
     except ValueError as e:
-        print(f"Environment variable validation error: {e}")
+        logging.error(f"Environment variable validation error: {e}")
         # Handle the error (e.g., log, inform the user, exit the application)
 
 

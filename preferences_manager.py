@@ -111,7 +111,7 @@ class PreferencesManager(QObject):
         font_size = preferences.get('font_size', '10')
 
         # Apply each preference
-        self.apply_theme(preferences.get('theme', 'Light'), font_size)
+        self.apply_theme(preferences.get('theme', ''), font_size)
         self.apply_font_size(font_size)
         self.apply_notification_setting(preferences.get('enable_notifications', True))
         self.apply_always_on_top(preferences.get('always_on_top', False))

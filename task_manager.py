@@ -152,7 +152,7 @@ class TaskManager:
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
-        self.insert_default_priorities(conn)
+        # self.insert_default_priorities(conn)
 
     def create_categories_table(self, conn):
         """
@@ -168,7 +168,7 @@ class TaskManager:
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
-        self.insert_default_categories(conn)
+        # self.insert_default_categories(conn)
 
     def create_preferences_table(self, conn):
         """
@@ -199,32 +199,6 @@ class TaskManager:
             )
         ''')
 
-    def insert_default_priorities(self, conn):
-        """
-        Inserts default priorities if they don't exist.
-        """
-        cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM priorities')
-        count = cursor.fetchone()[0]
-
-        if count == 0:
-            current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-            for priority in DEFAULT_PRIORITIES:
-                cursor.execute("INSERT INTO priorities (name, created_at) VALUES (?, ?)", (priority, current_time))
-
-    def insert_default_categories(self, conn):
-        """
-        Inserts default categories if they don't exist.
-        """
-        cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM categories')
-        count = cursor.fetchone()[0]
-
-        if count == 0:
-            current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-            for category in DEFAULT_CATEGORIES:
-                cursor.execute("INSERT INTO categories (name, created_at) VALUES (?, ?)", (category, current_time))
-
     def load_priorities(self):
         """
         Loads priorities from the database.
@@ -238,7 +212,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 cursor.execute('SELECT name FROM priorities')
                 priorities = [row[0] for row in cursor.fetchall()]
-                return priorities
+                return priorities + DEFAULT_PRIORITIES
         except sqlite3.DatabaseError as e:
             # Handle specific database-related errors
             logging.error(f"Database error: {e}")
@@ -262,7 +236,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 cursor.execute('SELECT name FROM categories')
                 categories = [row[0] for row in cursor.fetchall()]
-                return categories
+                return categories + DEFAULT_CATEGORIES
         except sqlite3.DatabaseError as e:
             # Logs database-related errors and provides feedback for debugging
             logging.error(f"Database error: {e}")
