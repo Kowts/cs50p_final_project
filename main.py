@@ -221,12 +221,12 @@ class LoginDialog(QDialog):
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
                 QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
 
-    def user_id(self):
+    def get_user_id(self):
         """
         Returns the user ID if it exists, otherwise returns None.
         """
         try:
-            return self._user_id
+            return self.user_id
         except AttributeError:
             return None
 
@@ -1550,10 +1550,8 @@ class CalendarDialog(QDialog):
             category_item = QTableWidgetItem(task[4])
 
             name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            priority_item.setFlags(priority_item.flags()
-                                   & ~Qt.ItemFlag.ItemIsEditable)
-            category_item.setFlags(category_item.flags()
-                                   & ~Qt.ItemFlag.ItemIsEditable)
+            priority_item.setFlags(priority_item.flags()& ~Qt.ItemFlag.ItemIsEditable)
+            category_item.setFlags(category_item.flags()& ~Qt.ItemFlag.ItemIsEditable)
 
             task_table.setItem(row, 0, name_item)
             task_table.setItem(row, 1, priority_item)
@@ -1565,8 +1563,7 @@ class CalendarDialog(QDialog):
                                  "QHeaderView::section { background-color: #f0f0f0; padding: 4px; }"
                                  "QTableWidget::item:selected { background-color: #e0e0e0; }")
 
-        dialog.resize(task_table.sizeHint().width(),
-                      task_table.sizeHint().height())
+        dialog.resize(task_table.sizeHint().width(), task_table.sizeHint().height())
         layout.addWidget(task_table)
         dialog.exec()
 
