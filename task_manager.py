@@ -199,34 +199,35 @@ class TaskManager:
             )
         ''')
 
-    def load_priorities(self):
+    def load_priorities(self, user_id):
         """
-        Loads priorities from the database.
+        Loads priorities from the database for a specific user.
+
+        Args:
+            user_id (int): The ID of the user.
 
         Returns:
             A list of priorities if successful, an empty list otherwise.
         """
         try:
-            # [Database query logic]
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT name FROM priorities')
+                cursor.execute('SELECT name FROM priorities WHERE user_id = ?', (user_id,))
                 priorities = [row[0] for row in cursor.fetchall()]
                 return priorities + DEFAULT_PRIORITIES
         except sqlite3.DatabaseError as e:
-            # Handle specific database-related errors
             logging.error(f"Database error: {e}")
-            # Consider logging this error and returning an appropriate response
             return []
         except Exception as e:
-            # Handle other, more general exceptions
             logging.error(f"An error occurred: {e}")
-            # Again, consider logging and how you want to handle this in the UI
             return []
 
-    def load_categories(self):
+    def load_categories(self, user_id):
         """
-        Retrieves a list of category names from the database.
+        Retrieves a list of category names from the database for a specific user.
+
+        Args:
+            user_id (int): The ID of the user.
 
         Returns:
             A list of category names if the query is successful, an empty list otherwise.
@@ -234,17 +235,15 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT name FROM categories')
+                cursor.execute('SELECT name FROM categories WHERE user_id = ?', (user_id,))
                 categories = [row[0] for row in cursor.fetchall()]
                 return categories + DEFAULT_CATEGORIES
         except sqlite3.DatabaseError as e:
-            # Logs database-related errors and provides feedback for debugging
             logging.error(f"Database error: {e}")
-            return []  # Returns an empty list to indicate failure in category retrieval
+            return []
         except Exception as e:
-            # Captures and logs unexpected errors
             logging.error(f"An error occurred: {e}")
-            return []  # Returns an empty list as a fallback
+            return []
 
     def priority_exists(self, priority_name):
         """
@@ -261,7 +260,7 @@ class TaskManager:
             cursor.execute("SELECT 1 FROM priorities WHERE name = ?", (priority_name,))
             return cursor.fetchone() is not None
 
-    def add_priority(self, priority_name):
+    def add_priority(self, priority_name, user_id):
         """
         Adds a new priority to the priorities table.
 
@@ -276,7 +275,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO priorities (name, created_at, status) VALUES (?, ?, ?)", (priority_name, current_time, 1))
+                cursor.execute("INSERT INTO priorities (user_id, name, created_at, status) VALUES (?, ?, ?, ?)", (user_id, priority_name, current_time, 1))
                 conn.commit()  # Make sure to commit the changes
             return f"Priority '{priority_name}' added successfully."
         except sqlite3.Error as e:
@@ -297,7 +296,7 @@ class TaskManager:
             cursor.execute("SELECT 1 FROM categories WHERE name = ?", (category_name,))
             return cursor.fetchone() is not None
 
-    def add_category(self, category_name):
+    def add_category(self, category_name, user_id):
         """
         Adds a new category to the categories table.
 
@@ -312,7 +311,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO categories (name, created_at, status) VALUES (?, ?, ?)", (category_name, current_time, 1))
+                cursor.execute("INSERT INTO categories (user_id, name, created_at, status) VALUES (?, ?, ?, ?)", (user_id, category_name, current_time, 1))
                 conn.commit()  # Make sure to commit the changes
             return f"Category '{category_name}' added successfully."
         except sqlite3.Error as e:
@@ -374,12 +373,14 @@ class TaskManager:
             password: The password of the user.
 
         Returns:
-            True if credentials are valid, False otherwise.
+            A tuple containing a boolean and the user ID if credentials are valid,
+            (False, None) otherwise.
         """
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, password, salt FROM users WHERE username = ?", (username,))
+                cursor.execute(
+                    "SELECT id, password, salt FROM users WHERE username = ?", (username,))
                 stored_data = cursor.fetchone()
 
                 if stored_data:
@@ -388,10 +389,10 @@ class TaskManager:
 
                     if stored_hashed_password == hashed_password:
                         return True, user_id
-                return False
+                return False, None
 
         except sqlite3.Error:
-            return False
+            return False, None  # Return False if there's an error during the operation
 
     def log_user_activity(self, username, event_type, status=None):
         """
