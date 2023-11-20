@@ -5,7 +5,7 @@ import logging
 import markdown
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMarginsF, QDate
 from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
-from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QCursor, QTextCharFormat
+from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QCursor, QColor, QTextCharFormat, QIcon, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -42,14 +42,35 @@ DEFAULT_PASSWORD = utils.get_env_variable('DEFAULT_PASSWORD')
 
 # Initialize the task ID to row mapping dictionary
 task_row_to_id = {}
+
 class TaskTracker(QThread):
+    """
+    A class that tracks tasks and emits a signal when due tasks are found.
+
+    Attributes:
+        notify_due_tasks (pyqtSignal): A signal that is emitted when due tasks are found.
+
+    Methods:
+        __init__(self, task_manager): Initializes the TaskTracker object.
+        run(self): Runs the task tracking process.
+    """
+
     notify_due_tasks = pyqtSignal(list)
 
     def __init__(self, task_manager):
+        """
+        Initializes the TaskTracker object.
+
+        Parameters:
+            task_manager (TaskManager): The task manager object.
+        """
         super().__init__()
         self.task_manager = task_manager
 
     def run(self):
+        """
+        Runs the task tracking process.
+        """
         while True:
             self.sleep(10)  # Check every hour
             logging.info("Checking for due tasks...")
@@ -62,6 +83,14 @@ class TaskTracker(QThread):
 
 class LoginDialog(QDialog):
     def __init__(self, task_manager, main_window, preferences_manager=None):
+        """
+        Initializes the Login class.
+
+        Args:
+            task_manager (TaskManager): The task manager object.
+            main_window (MainWindow): The main window object.
+            preferences_manager (PreferencesManager, optional): The preferences manager object. Defaults to None.
+        """
         super().__init__()
 
         self.task_manager = task_manager
@@ -80,9 +109,23 @@ class LoginDialog(QDialog):
         # Set up the UI components here
         self.init_ui()
 
-    def init_ui(self):
 
-        # Create a vertical layout
+    def init_ui(self):
+        """
+        Initializes the user interface for the login dialog.
+
+        This method sets up the layout and widgets for the login dialog, including the login header label,
+        username and password input fields, login button, and create account label. It also applies user
+        preferences for 'Always on Top' if set.
+
+        Parameters:
+        - self: The instance of the class.
+
+        Returns:
+        - None
+        """
+
+        # Main layout for the login dialog
         login_layout = QVBoxLayout()
 
         # Create the LOGIN header label
@@ -91,7 +134,7 @@ class LoginDialog(QDialog):
         login_title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #1d1f21;")
         login_layout.addWidget(login_title_label)
 
-        # Username label and input
+        # Username input section
         username_label = QLabel("Username")
         login_layout.addWidget(username_label)
         self.username_input = QLineEdit()
@@ -99,10 +142,9 @@ class LoginDialog(QDialog):
         self.username_input.setMinimumHeight(32)
         login_layout.addWidget(self.username_input)
 
-        # Add vertical spacing and Adjust the number to increase or decrease the space
+        # Password input section
+        # Spacing between username and password inputs
         login_layout.addSpacing(12)
-
-        # Password label
         password_label = QLabel("Password")
         login_layout.addWidget(password_label)
         self.password_input = QLineEdit()
@@ -111,48 +153,58 @@ class LoginDialog(QDialog):
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         login_layout.addWidget(self.password_input)
 
-        # Create a horizontal layout for the button to center it
+        # Login button section
         button_layout = QHBoxLayout()
-        button_layout.addStretch()  # Spacer that will push the button towards the center
-
-        # Login button
+        button_layout.addStretch()
         self.login_button = QPushButton("Login")
         self.login_button.setFixedWidth(100)
+        self.login_button.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
         self.login_button.clicked.connect(self.try_login)
         button_layout.addWidget(self.login_button)
-        button_layout.addStretch() # Add the horizontal layout to the main vertical layout
+        button_layout.addStretch()
         login_layout.addLayout(button_layout)
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(self.login_button)
-        button_layout.addStretch()
 
-        # Create a horizontal layout for the 'Create an Account' label
+        # Create account label
         account_layout = QHBoxLayout()
         account_layout.addStretch()
         create_account_label = QLabel("<a href='#'>Create an Account</a>")
         create_account_label.setStyleSheet("color: blue; text-decoration: underline;")
         create_account_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        create_account_label.setOpenExternalLinks(False)  # Prevent opening links
+        create_account_label.setOpenExternalLinks(False)
         create_account_label.linkActivated.connect(self.create_account)
         account_layout.addWidget(create_account_label)
         account_layout.addStretch()
-
-        # Add the horizontal layout to the main vertical layout
         login_layout.addLayout(account_layout)
 
         # Set the layout to the dialog
         self.setLayout(login_layout)
 
-        # Set the "always on top" property based on the user's preference
+        # Shortcut for login
+        login_shortcut = QShortcut(QKeySequence("Return"), self)
+        login_shortcut.activated.connect(self.try_login)
+
+        # Apply user preferences for 'Always on Top' if set
         if self.preferences_manager:
             self.preferences_manager.load_and_apply_preferences()
 
     def try_login(self):
+        """
+        Attempts to log in the user with the provided username and password.
+        If the login is successful, the user is accepted and their user_id is stored.
+        If the login fails, the number of failed attempts is incremented.
+        If the number of failed attempts exceeds the maximum allowed attempts, the application is exited.
+        """
+
         MAX_ATTEMPTS = 3  # Maximum number of allowed attempts
 
         username = self.username_input.text()
         password = self.password_input.text()
+
+        # Basic validation
+        if not username or not password:
+            QMessageBox.warning(self, "Login Failed", "Please enter both username and password.")
+            return
+
 
         valid_login, user_id = self.task_manager.verify_user(username, password)
         if valid_login:
@@ -169,22 +221,53 @@ class LoginDialog(QDialog):
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
                 QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
 
-    def get_user_id(self):
-        return self.user_id
+    def user_id(self):
+        """
+        Returns the user ID if it exists, otherwise returns None.
+        """
+        try:
+            return self._user_id
+        except AttributeError:
+            return None
 
     def reset_login_dialog(self):
         """
         Resets the login dialog to its initial state.
+
+        This method clears the username and password input fields and resets the number of failed login attempts to zero.
         """
         self.username_input.clear()
         self.password_input.clear()
         self.failed_attempts = 0
 
     def create_account(self):
+        """
+        Opens a registration dialog for creating a new account.
+
+        This method creates an instance of the RegistrationDialog class and
+        executes it, allowing the user to register and create a new account.
+        """
         registration_dialog = RegistrationDialog(self.task_manager)
         registration_dialog.exec()
 
 class RegistrationDialog(QDialog):
+    """
+    A dialog window for user registration.
+
+    Args:
+        task_manager (TaskManager): An instance of the task manager.
+
+    Attributes:
+        task_manager (TaskManager): An instance of the task manager.
+        username_input (QLineEdit): The input field for the username.
+        password_input (QLineEdit): The input field for the password.
+        password_repeat_input (QLineEdit): The input field for repeating the password.
+        register_button (QPushButton): The button for registering the user.
+
+    Methods:
+        __init__(self, task_manager): Initializes the RegistrationDialog.
+        register(self): Validates the inputs and creates a new user.
+    """
     def __init__(self, task_manager):
         super().__init__()
 
@@ -232,6 +315,7 @@ class RegistrationDialog(QDialog):
         self.register_button.clicked.connect(self.register)
         button_layout.addWidget(self.register_button)
         button_layout.addStretch()  # Add the horizontal layout to the main vertical layout
+        self.register_button.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
         layout.addLayout(button_layout)
         button_layout = QHBoxLayout()
         button_layout.addStretch()
@@ -241,6 +325,16 @@ class RegistrationDialog(QDialog):
         self.setLayout(layout)
 
     def register(self):
+        """
+        Validates the inputs and creates a new user.
+
+        If any of the input fields are empty or the passwords do not match,
+        a warning message is displayed. Otherwise, the user creation logic
+        is implemented in the task_manager. If an error occurs during user
+        creation, an error message is displayed. Otherwise, a success message
+        is displayed and the dialog is accepted.
+        """
+
         # Validate the inputs
         username = self.username_input.text()
         password = self.password_input.text()
@@ -264,6 +358,14 @@ class RegistrationDialog(QDialog):
             self.accept()
 
 class MainWindow(QMainWindow):
+    """
+    The main window of the To-Do List Manager application.
+
+    Args:
+        task_manager (TaskManager): An instance of the TaskManager class.
+        login_dialog (LoginDialog): An instance of the LoginDialog class.
+        user_id (int, optional): The ID of the user. Defaults to None.
+    """
     def __init__(self, task_manager, login_dialog, user_id=None):
         super().__init__()
 
@@ -296,6 +398,9 @@ class MainWindow(QMainWindow):
         self.task_tracker.start()
 
     def setup_ui(self):
+        """
+        Set up the user interface for the application.
+        """
         # Create a layout for the central widget
         layout = QVBoxLayout()
         self.centralWidget().setLayout(layout)
@@ -386,26 +491,23 @@ class MainWindow(QMainWindow):
         self.setup_menu_widget()
 
     def set_attribute(self, attribute_name, value):
-        """
-        Dynamically sets a user attribute.
-
-        Args:
-            attribute_name (str): Name of the attribute to set.
-            value: The value to assign to the attribute.
-        """
+        # Dynamically sets a user attribute.
         setattr(self, attribute_name, value)
 
     def show_calendar_dialog(self):
+        # Opens a calendar dialog for the user to interact with.
         self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id)
         self.calendar_dialog.exec()
 
     def show_date_picker(self):
+        # Display a date picker dialog and set the selected date as the text of the due date input field.
         if self.date_picker_dialog.exec() == QDialog.DialogCode.Accepted:
             selected_date = self.calendar_widget.selectedDate()
             self.due_date_input.setText(
                 selected_date.toString(Qt.DateFormat.ISODate))
 
     def apply_table_style(self):
+        # Apply custom table styles to the task_table_widget.
         header_style = "QHeaderView::section { border-top: 1px solid grey; border-bottom: 1px solid grey; padding-left: 5px; }"
         row_style = "QTableWidget::item { border-bottom: 1px solid grey; }"
         self.task_table_widget.horizontalHeader().setStyleSheet(header_style)
@@ -513,6 +615,9 @@ class MainWindow(QMainWindow):
         self.centralWidget().layout().addWidget(table_widget_container)  # Changed here
 
     def show_user_guide(self):
+        """
+        Display the user guide dialog with the content of the README.md file.
+        """
         # Create the dialog
         dialog = QDialog(self)
         dialog.setWindowTitle("User Guide")
@@ -548,6 +653,9 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def show_about_dialog(self):
+        """
+        Display an about dialog with information about the application.
+        """
         dialog = QDialog(self)
         dialog.setWindowTitle("About Application")
 
@@ -591,20 +699,24 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def show_preferences_dialog(self):
+        # Opens the Preferences Dialog where users can change application settings.
         dialog = PreferencesDialog(self.task_manager, self.preferences_manager, self)
         dialog.exec()
 
     def show_add_priority_dialog(self):
+        # Opens a dialog to add a new priority.
         dialog = AddDataDialog(self.task_manager, 'priority', self.user_id)
         dialog.data_added.connect(self.update_dropdowns)
         dialog.exec()
 
     def show_add_category_dialog(self):
+        # Opens a dialog to add a new category.
         dialog = AddDataDialog(self.task_manager, 'category', self.user_id)
         dialog.data_added.connect(self.update_dropdowns)
         dialog.exec()
 
     def show_find_dialog(self):
+        # Displays the Find Dialog, allowing users to search for tasks.
         self.find_dialog = FindDialog(self.task_text_edit, self.task_manager)
         self.find_dialog.search_initiated.connect(self.search_database)
         self.find_dialog.show()
@@ -689,6 +801,15 @@ class MainWindow(QMainWindow):
 
     # Function to add a new task
     def add_task(self):
+        """
+        Adds a task to the task manager.
+
+        Retrieves the task name, due date, priority, and category from the input fields.
+        Validates the task name and displays an error message if it is empty.
+        Adds the task to the database using the task manager's add_task method.
+        If successful, adds the task to the table and maps it to the task ID.
+        Updates the task list, clears the input fields, and sends a Windows notification.
+        """
         task_name = self.task_name_input.text().strip()
 
         if not task_name:
@@ -733,6 +854,9 @@ class MainWindow(QMainWindow):
                 utils.show_error("Task ID Error", "Failed to retrieve the task ID.")
 
     def remove_selected_task(self):
+        """
+        Removes the selected tasks from the task table.
+        """
         selected_items = self.task_table_widget.selectedItems()
         if not selected_items:
             QMessageBox.warning(self, "No Selection", "Please select a task to remove.")
@@ -767,6 +891,9 @@ class MainWindow(QMainWindow):
         logging.info(f"Removed tasks: {selected_task_ids}")
 
     def edit_selected_task(self):
+        """
+        Edit the selected task.
+        """
         selected_items = self.task_table_widget.selectedItems()
         if not selected_items:
             utils.show_error("No Task Selected","Please select a task to edit.")
@@ -854,6 +981,9 @@ class MainWindow(QMainWindow):
         self.clear_entries()
 
     def logout(self):
+        """
+        Logs out the user, closes the session, hides the main window, and shows the login dialog.
+        """
         # Assuming self.username stores the username of the logged-in user
         if hasattr(self, 'username'):
             # Log the logout event
@@ -884,6 +1014,9 @@ class MainWindow(QMainWindow):
                 logging.info(f"Notification already sent for task: {task}")
 
     def export_tasks(self):
+        """
+        Export tasks to a CSV file.
+        """
         file_name, _ = QFileDialog.getSaveFileName(
             self, "Export Tasks", "", "CSV Files (*.csv)")
         if file_name:
@@ -895,6 +1028,11 @@ class MainWindow(QMainWindow):
                 logging.error("An error occurred while exporting tasks: {e}")
 
     def import_tasks(self):
+        """
+        Opens a file dialog to select a CSV file and imports tasks from the selected file.
+        Refreshes the task list in the UI and displays a success message if the import is successful.
+        Displays an error message if an exception occurs during the import process.
+        """
         file_name, _ = QFileDialog.getOpenFileName(self, "Import Tasks", "", "CSV Files (*.csv)")
         if file_name:
             try:
@@ -979,7 +1117,19 @@ class MainWindow(QMainWindow):
         # If the user accepts the print dialog, proceed to print
         if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
             self.print_preview(printer)
+
 class EditTaskDialog(QDialog):
+    """
+    Initializes the EditTaskDialog class.
+
+    Args:
+        task_details (tuple): The details of the task to be edited.
+        task_manager (TaskManager): The task manager object.
+        user_id (int): The ID of the user.
+
+    Returns:
+        None
+    """
     def __init__(self, task_details, task_manager, user_id):
         super().__init__()
         self.task_details = task_details
@@ -1039,6 +1189,22 @@ class EditTaskDialog(QDialog):
         category = self.category_combobox.currentText()
         return (name, due_date, priority, category)
 class PreferencesDialog(QDialog):
+    """
+    A dialog window for managing user preferences.
+
+    Args:
+        task_manager (TaskManager): The task manager object.
+        preferences_manager (PreferencesManager): The preferences manager object.
+        parent (QWidget): The parent widget.
+
+    Attributes:
+        task_manager (TaskManager): The task manager object.
+        preferences_manager (PreferencesManager): The preferences manager object.
+        theme_selector (QComboBox): The combo box for selecting the theme.
+        notification_checkbox (QCheckBox): The checkbox for enabling notifications.
+        font_size_selector (QComboBox): The combo box for selecting the font size.
+        always_on_top_checkbox (QCheckBox): The checkbox for enabling "Always on Top".
+    """
     def __init__(self, task_manager, preferences_manager, parent=None):
         super().__init__(parent)
 
@@ -1049,6 +1215,9 @@ class PreferencesDialog(QDialog):
         self.setup_ui()
 
     def setup_ui(self):
+        """
+        Sets up the user interface for the application settings.
+        """
         layout = QVBoxLayout(self)
 
         # setting: Theme Selector
@@ -1133,9 +1302,28 @@ class PreferencesDialog(QDialog):
         self.always_on_top_checkbox.setChecked(always_on_top_bool)
 class AddDataDialog(QDialog):
 
+    """
+    A dialog window for adding data (priority or category) to the task manager.
+
+    Attributes:
+    - data_added: A signal to notify that new data was added.
+    - task_manager: The task manager object.
+    - data_type: The type of data to be added ('priority' or 'category').
+    - user_id: The user ID.
+    """
+
     data_added = pyqtSignal()  # Signal to notify that new data was added
 
     def __init__(self, task_manager, data_type, user_id, parent=None):
+        """
+        Initialize the AddDataDialog.
+
+        Parameters:
+        - task_manager: The task manager object.
+        - data_type: The type of data to be added ('priority' or 'category').
+        - user_id: The user ID.
+        - parent: The parent widget (default is None).
+        """
         super().__init__(parent)
         self.task_manager = task_manager
         self.data_type = data_type # 'priority' or 'category'
@@ -1144,6 +1332,9 @@ class AddDataDialog(QDialog):
         self.init_ui()
 
     def init_ui(self):
+        """
+        Initialize the user interface of the dialog.
+        """
         layout = QVBoxLayout()
 
         self.data_input = QLineEdit()
@@ -1157,6 +1348,9 @@ class AddDataDialog(QDialog):
         self.setLayout(layout)
 
     def save_data(self):
+        """
+        Save the entered data to the task manager.
+        """
         data = self.data_input.text().strip()
         if data:
             if self.data_type == 'priority' and not self.task_manager.priority_exists(data):
@@ -1171,19 +1365,41 @@ class AddDataDialog(QDialog):
                 self.accept()
             else:
                 QMessageBox.warning(self, "Exists", f"{self.data_type.capitalize()} '{data}' already exists.")
-class FindDialog(QDialog):
 
+class FindDialog(QDialog):
+    """
+    Dialog for searching tasks with various filter options.
+
+    Attributes:
+        text_widget (QLineEdit): The input widget for search text.
+        task_manager (TaskManager): The task manager to handle search operations.
+        search_initiated (pyqtSignal): Signal to emit search parameters.
+    """
     # Signal with the search parameters
     search_initiated = pyqtSignal(str, bool, bool, bool)
 
     def __init__(self, text_widget, task_manager):
+        """
+        Initializes the FindDialog with a text widget and a task manager.
+
+        Args:
+            text_widget (QLineEdit): The input widget for search text.
+            task_manager (TaskManager): The task manager for handling search operations.
+        """
         super().__init__()
         self.text_widget = text_widget
         self.task_manager = task_manager
-        self.init_ui()
         self.setWindowTitle("Find")
+        self.init_ui()
+
+        # Shortcut for 'Find next' (e.g., Enter key)
+        self.find_next_shortcut = QShortcut(QKeySequence("Return"), self)
+        self.find_next_shortcut.activated.connect(self.find_next)
 
     def init_ui(self):
+        """
+        Initializes the user interface components of the dialog.
+        """
         layout = QVBoxLayout()
 
         # Search text input
@@ -1209,39 +1425,70 @@ class FindDialog(QDialog):
         self.find_button.clicked.connect(self.find_next)
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.reject)
+
+        # Layout for buttons
         buttons_layout = QHBoxLayout()
         buttons_layout.addWidget(self.find_button)
         buttons_layout.addWidget(self.cancel_button)
         layout.addLayout(buttons_layout)
 
+        # Styling buttons for a better visual appeal
+        self.find_button.setIcon(QIcon("icons/search.png"))
+        self.cancel_button.setIcon(QIcon("icons/cancel.png"))
+        self.find_button.setStyleSheet("background-color: lightblue; padding: 5px;")
+        self.cancel_button.setStyleSheet("background-color: lightcoral; padding: 5px;")
+
         self.setLayout(layout)
 
     def find_next(self):
-
-        search_text = self.find_what_input.text()
-        if not search_text:
+        """
+        Handles the 'Find next' button click event with validation.
+        """
+        text = self.find_what_input.text().strip()
+        if not text:
+            QMessageBox.warning(self, "Empty Search", "Please enter a search term.")
             return
 
-        text = self.find_what_input.text()
+        # Retrieve search parameters
         match_case = self.match_case_checkbox.isChecked()
         whole_word = self.whole_word_checkbox.isChecked()
         use_regex = self.regular_expression_checkbox.isChecked()
 
-        # Emit the search_initiated signal instead of performing a find on the text widget
+        # Emit the search_initiated signal with the retrieved parameters
         self.search_initiated.emit(text, match_case, whole_word, use_regex)
 
 class CalendarDialog(QDialog):
+    """
+    Calendar dialog to display tasks in a calendar view and allow users to interact with them.
+
+    Attributes:
+        task_manager (TaskManager): The task manager to handle task-related operations.
+        user_id (int): The ID of the current user.
+        tasks (list): A list of tasks associated with the user.
+    """
+
     def __init__(self, task_manager, user_id):
+        """
+        Initializes the CalendarDialog with a task manager and a user ID.
+
+        Args:
+            task_manager (TaskManager): The task manager for task operations.
+            user_id (int): The ID of the user whose tasks are to be displayed.
+        """
         super().__init__()
         self.setWindowTitle("Calendar")
         self.setGeometry(300, 300, 400, 300)
 
         self.task_manager = task_manager
         self.user_id = user_id
+
         self.init_ui()
         self.load_tasks()
 
     def init_ui(self):
+        """
+        Initializes the user interface components of the dialog.
+        """
         self.layout = QVBoxLayout(self)
         self.calendar = QCalendarWidget(self)
         self.calendar.clicked.connect(self.date_clicked)
@@ -1250,70 +1497,87 @@ class CalendarDialog(QDialog):
         self.info_label = QLabel("Select a date to view tasks", self)
         self.layout.addWidget(self.info_label)
 
-        self.add_task_button = QPushButton("Add Task", self)
-        self.add_task_button.clicked.connect(self.add_task)
-        self.layout.addWidget(self.add_task_button)
-
     def load_tasks(self):
-        # Load tasks from the task manager
+        """
+        Loads tasks from the task manager and displays them in the calendar.
+        """
         self.tasks = self.task_manager.list_tasks(self.user_id)
         self.display_tasks()
 
     def display_tasks(self):
+        """
+        Updates the calendar display with task markers or indicators.
+        """
         for task in self.tasks:
-            # Assuming task[2] is the due date
             task_date = QDate.fromString(task[2], "yyyy-MM-dd")
             format = QTextCharFormat()
-            # Color based on priority or category
-            format.setBackground(Qt.yellow)
+            format.setBackground(QColor("yellow"))
             self.calendar.setDateTextFormat(task_date, format)
 
     def date_clicked(self, date):
-        # Show tasks for the clicked date
-        tasks_on_date = [task for task in self.tasks if task[2] == date.toString("yyyy-MM-dd")]
+        """
+        Handles the event when a date is clicked on the calendar.
+
+        Args:
+            date (QDate): The date clicked by the user.
+        """
+        tasks_on_date = [task for task in self.tasks if task[2]
+                         == date.toString("yyyy-MM-dd")]
         self.show_tasks_for_date(tasks_on_date, date)
 
     def show_tasks_for_date(self, tasks, date):
+        """
+        Displays a dialog with tasks scheduled for a specific date.
+
+        Args:
+            tasks (list): List of tasks for the selected date.
+            date (QDate): The selected date.
+        """
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Tasks for {date.toString()}")
         layout = QVBoxLayout(dialog)
 
-        # Columns: Name, Priority, Actions
         task_table = QTableWidget(len(tasks), 3)
-        task_table.setHorizontalHeaderLabels(["Name", "Priority", "Actions"])
+        task_table.setHorizontalHeaderLabels(["Name", "Priority", "Category"])
+        task_table.horizontalHeader().setStretchLastSection(True)
+        task_table.verticalHeader().setVisible(False)
+        task_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows)
+
         for row, task in enumerate(tasks):
-            task_table.setItem(row, 0, QTableWidgetItem(task[1]))  # Task Name
-            task_table.setItem(row, 1, QTableWidgetItem(task[3]))  # Priority
+            name_item = QTableWidgetItem(task[1])
+            priority_item = QTableWidgetItem(task[3])
+            category_item = QTableWidgetItem(task[4])
 
-            # Edit and Delete buttons
-            btn_layout = QHBoxLayout()
-            edit_btn = QPushButton("Edit")
-            edit_btn.clicked.connect(lambda _, t=task: self.edit_task(t))
-            delete_btn = QPushButton("Delete")
-            delete_btn.clicked.connect(lambda _, t_id=task[0]: self.delete_task(t_id))
-            btn_layout.addWidget(edit_btn)
-            btn_layout.addWidget(delete_btn)
-            cell_widget = QWidget()
-            cell_widget.setLayout(btn_layout)
-            task_table.setCellWidget(row, 2, cell_widget)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            priority_item.setFlags(priority_item.flags()
+                                   & ~Qt.ItemFlag.ItemIsEditable)
+            category_item.setFlags(category_item.flags()
+                                   & ~Qt.ItemFlag.ItemIsEditable)
 
+            task_table.setItem(row, 0, name_item)
+            task_table.setItem(row, 1, priority_item)
+            task_table.setItem(row, 2, category_item)
+
+        task_table.resizeColumnsToContents()
+        task_table.setStyleSheet("QTableWidget { border: none; }"
+                                 "QTableWidget::item { border-bottom: 1px solid #ddd; }"
+                                 "QHeaderView::section { background-color: #f0f0f0; padding: 4px; }"
+                                 "QTableWidget::item:selected { background-color: #e0e0e0; }")
+
+        dialog.resize(task_table.sizeHint().width(),
+                      task_table.sizeHint().height())
         layout.addWidget(task_table)
         dialog.exec()
 
-    def edit_task(self, task):
-        # Open dialog to edit the selected task
-        pass
-
-    def delete_task(self, task_id):
-        # Confirm and delete the task, then refresh the calendar
-        pass
-
-    def add_task(self):
-        selected_date = self.calendar.selectedDate()
-        # Add task logic for the selected date
-        pass
-
 def main():
+    """
+    Main entry point of the application.
+    Initializes the QApplication, TaskManager, MainWindow, LoginDialog, and PreferencesManager.
+    Checks for existing users and creates a default user if none exist.
+    Displays the login dialog and shows the main window if login is successful.
+    Handles any value errors that occur during execution.
+    """
     app = QApplication(sys.argv)
 
     try:
