@@ -206,7 +206,6 @@ class LoginDialog(QDialog):
             QMessageBox.warning(self, "Login Failed", "Please enter both username and password.")
             return
 
-
         valid_login, user_id = self.task_manager.verify_user(username, password)
         if valid_login:
             self.accept()  # Successful login
@@ -394,9 +393,8 @@ class MainWindow(QMainWindow):
         self.hide()  # Hide the main window initially
         self.preferences_manager.load_and_apply_preferences()
 
-        # Start the task tracker thread
+        # Initialize the task tracker thread
         self.task_tracker.notify_due_tasks.connect(self.notify_due_tasks)
-        self.task_tracker.start()
 
     def setup_ui(self):
         """
@@ -491,6 +489,10 @@ class MainWindow(QMainWindow):
         self.update_task_list()
         self.setup_menu_widget()
 
+    def start_task_tracker(self):
+        """Starts the task tracker to check for due tasks."""
+        self.task_tracker.start()
+
     def set_attribute(self, attribute_name, value):
         # Dynamically sets a user attribute.
         setattr(self, attribute_name, value)
@@ -575,6 +577,11 @@ class MainWindow(QMainWindow):
         find_action.triggered.connect(self.show_find_dialog)
         data_menu.addAction(find_action)
 
+        # Create Preferences action
+        calendar_action = QAction("&Calendar", self)
+        calendar_action.triggered.connect(self.show_calendar_dialog)
+        data_menu.addAction(calendar_action)
+
         # Add a separator line
         data_menu.addSeparator()
 
@@ -603,11 +610,6 @@ class MainWindow(QMainWindow):
         preferences_action = QAction("&Preferences", self)
         preferences_action.triggered.connect(self.show_preferences_dialog)
         settings_menu.addAction(preferences_action)
-
-        # Create Preferences action
-        calendar_action = QAction("&Calendar", self)
-        calendar_action.triggered.connect(self.show_calendar_dialog)
-        settings_menu.addAction(calendar_action)
 
         # Create a widget to hold the table widget and add it to the main layout
         table_widget_container = QWidget()
@@ -1231,6 +1233,10 @@ class PreferencesDialog(QDialog):
         self.notification_checkbox = QCheckBox("Enable Notifications", self)
         layout.addWidget(self.notification_checkbox)
 
+        # Create a checkbox for the "Always on Top" setting
+        self.always_on_top_checkbox = QCheckBox("Always on Top", self)
+        layout.addWidget(self.always_on_top_checkbox)
+
         # setting: Font Size
         self.font_size_selector = QComboBox()
         font_sizes = ["8", "10", "12", "14", "16", "18", "20", "24"]  # Add more sizes as needed
@@ -1238,20 +1244,18 @@ class PreferencesDialog(QDialog):
         layout.addWidget(QLabel("Font Size:"))
         layout.addWidget(self.font_size_selector)
 
-        # Create a checkbox for the "Always on Top" setting
-        self.always_on_top_checkbox = QCheckBox("Always on Top", self)
-        layout.addWidget(self.always_on_top_checkbox)
-
-        # Calendar Color Selector
-        self.calendar_color_selector = QComboBox()
-        self.calendar_color_selector.addItems(['Red', 'Blue', 'Green', 'Yellow', 'Default'])
+        # Add label for Calendar Color
         layout.addWidget(QLabel("Calendar Color:"))
-        layout.addWidget(self.calendar_color_selector)
 
-        # Button for picking the calendar color
-        self.calendar_color_button = QPushButton("Pick Calendar Color")
+        # Create horizontal layout for the calendar color input group
+        calendar_color_layout = QHBoxLayout()
+        self.calendar_color_input = QLineEdit()
+        self.calendar_color_input.setReadOnly(True)
+        calendar_color_layout.addWidget(self.calendar_color_input)
+        self.calendar_color_button = QPushButton("Pick Color") # Button for picking the calendar color
         self.calendar_color_button.clicked.connect(self.pick_calendar_color)
-        layout.addWidget(self.calendar_color_button)
+        calendar_color_layout.addWidget(self.calendar_color_button)
+        layout.addLayout(calendar_color_layout) # Add the horizontal layout to the main vertical layout
 
         # OK and Cancel buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Close)
@@ -1265,18 +1269,11 @@ class PreferencesDialog(QDialog):
     def pick_calendar_color(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            # Convert the QColor object to a hex string
+            # Set the background color of the input field to the chosen color
             color_hex = color.name()
-
-            # Find if the color is already in the combo box
-            index = self.calendar_color_selector.findText(color_hex)
-            if index == -1:
-                # Add the new color to the combo box if it's not already there
-                self.calendar_color_selector.addItem(color_hex)
-                index = self.calendar_color_selector.findText(color_hex)
-
-            # Set the current index of the combo box to the new color
-            self.calendar_color_selector.setCurrentIndex(index)
+            self.calendar_color_input.setStyleSheet(f"background-color: {color_hex.upper()};")
+            # Optionally, display the color's hexadecimal value in the input field
+            self.calendar_color_input.setText(color_hex.upper())
 
     def save_preferences(self):
         # Save the current preferences to the database
@@ -1284,7 +1281,7 @@ class PreferencesDialog(QDialog):
         enable_notifications = self.notification_checkbox.isChecked()
         font_size = self.font_size_selector.currentText()
         always_on_top = self.always_on_top_checkbox.isChecked()
-        calendar_color = self.calendar_color_selector.currentText()
+        calendar_color = self.calendar_color_input.text()
 
         # Save preferences
         self.task_manager.save_preferences({
@@ -1292,7 +1289,7 @@ class PreferencesDialog(QDialog):
             'enable_notifications': str(enable_notifications),
             'font_size': font_size,
             'always_on_top': str(always_on_top),
-            'calendar_color': calendar_color
+            'calendar_color': calendar_color.upper()
         })
 
         # Apply preferences immediately
@@ -1330,11 +1327,13 @@ class PreferencesDialog(QDialog):
         always_on_top_bool = always_on_top.lower() == 'true'  # Convert to boolean
         self.always_on_top_checkbox.setChecked(always_on_top_bool)
 
-        # Get the saved calendar color (default to "Default" if not set)
-        saved_calendar_color = preferences.get('calendar_color', 'Default')
-        index = self.calendar_color_selector.findText(saved_calendar_color)
-        if index >= 0:
-            self.calendar_color_selector.setCurrentIndex(index)
+        # Get the saved calendar color (default to a neutral color if not set)
+        saved_calendar_color = preferences.get('calendar_color', '')  # Default to white
+        if QColor(saved_calendar_color).isValid():
+            # Set the background color of the input field to the saved color
+            self.calendar_color_input.setStyleSheet(f"background-color: {saved_calendar_color};")
+            # Display the color's hexadecimal value in the input field
+            self.calendar_color_input.setText(saved_calendar_color.upper())
 
 class AddDataDialog(QDialog):
     """
@@ -1511,7 +1510,7 @@ class CalendarDialog(QDialog):
         """
         super().__init__()
         self.setWindowTitle("Calendar")
-        self.setGeometry(300, 300, 400, 300)
+        self.setGeometry(200, 200, 500, 400)
 
         self.task_manager = task_manager
         self.user_id = user_id
@@ -1569,8 +1568,7 @@ class CalendarDialog(QDialog):
         Args:
             date (QDate): The date clicked by the user.
         """
-        tasks_on_date = [task for task in self.tasks if task[2]
-                         == date.toString("yyyy-MM-dd")]
+        tasks_on_date = [task for task in self.tasks if task[2] == date.toString("yyyy-MM-dd")]
         self.show_tasks_for_date(tasks_on_date, date)
 
     def show_tasks_for_date(self, tasks, date):
@@ -1661,6 +1659,7 @@ def main():
             # Show the main window only if login is successful
             user_id = login_dialog.get_user_id()  # Retrieve the user_id
             main_window = MainWindow(task_manager, login_dialog, user_id)
+            main_window.start_task_tracker()  # Start the task tracker here
             main_window.show()
             sys.exit(app.exec())
         else:
