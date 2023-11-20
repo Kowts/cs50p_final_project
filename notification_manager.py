@@ -5,7 +5,6 @@ import utils
 # Initialize logging at the start of the application for consistent and centralized logging.
 utils.setup_logging()
 
-
 class NotificationManager:
     """Manages notifications, ensuring they are sent based on predefined frequencies."""
 
