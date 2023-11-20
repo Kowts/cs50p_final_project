@@ -21,11 +21,9 @@ class DefaultStatus(Enum):
     ACTIVE = 1
     INACTIVE = 0
 class TaskManager:
-
     """
     Manages tasks, user authentication, and database interactions.
     """
-
     def __init__(self, db_file=DATABASE_FILE):
         """
         Initializes the TaskManager with a database file and sets up the database.
@@ -147,6 +145,7 @@ class TaskManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 name TEXT NOT NULL,
+                color TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 status INTEGER DEFAULT 1,
                 FOREIGN KEY(user_id) REFERENCES users(id)

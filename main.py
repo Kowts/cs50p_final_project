@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
+    QColorDialog,
     QCheckBox,
     QTextBrowser,
     QVBoxLayout,
@@ -496,7 +497,7 @@ class MainWindow(QMainWindow):
 
     def show_calendar_dialog(self):
         # Opens a calendar dialog for the user to interact with.
-        self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id)
+        self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id, self.preferences_manager)
         self.calendar_dialog.exec()
 
     def show_date_picker(self):
@@ -1241,6 +1242,17 @@ class PreferencesDialog(QDialog):
         self.always_on_top_checkbox = QCheckBox("Always on Top", self)
         layout.addWidget(self.always_on_top_checkbox)
 
+        # Calendar Color Selector
+        self.calendar_color_selector = QComboBox()
+        self.calendar_color_selector.addItems(['Red', 'Blue', 'Green', 'Yellow', 'Default'])
+        layout.addWidget(QLabel("Calendar Color:"))
+        layout.addWidget(self.calendar_color_selector)
+
+        # Button for picking the calendar color
+        self.calendar_color_button = QPushButton("Pick Calendar Color")
+        self.calendar_color_button.clicked.connect(self.pick_calendar_color)
+        layout.addWidget(self.calendar_color_button)
+
         # OK and Cancel buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Close)
         button_box.accepted.connect(self.save_preferences)
@@ -1250,20 +1262,37 @@ class PreferencesDialog(QDialog):
         # Load current preferences
         self.load_preferences()
 
+    def pick_calendar_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            # Convert the QColor object to a hex string
+            color_hex = color.name()
+
+            # Find if the color is already in the combo box
+            index = self.calendar_color_selector.findText(color_hex)
+            if index == -1:
+                # Add the new color to the combo box if it's not already there
+                self.calendar_color_selector.addItem(color_hex)
+                index = self.calendar_color_selector.findText(color_hex)
+
+            # Set the current index of the combo box to the new color
+            self.calendar_color_selector.setCurrentIndex(index)
+
     def save_preferences(self):
         # Save the current preferences to the database
         theme = self.theme_selector.currentText()
         enable_notifications = self.notification_checkbox.isChecked()
         font_size = self.font_size_selector.currentText()
         always_on_top = self.always_on_top_checkbox.isChecked()
-
+        calendar_color = self.calendar_color_selector.currentText()
 
         # Save preferences
         self.task_manager.save_preferences({
             'theme': theme,
             'enable_notifications': str(enable_notifications),
             'font_size': font_size,
-            'always_on_top': str(always_on_top)
+            'always_on_top': str(always_on_top),
+            'calendar_color': calendar_color
         })
 
         # Apply preferences immediately
@@ -1300,8 +1329,14 @@ class PreferencesDialog(QDialog):
         always_on_top = preferences.get('always_on_top', 'False')  # Default to 'False' if not found
         always_on_top_bool = always_on_top.lower() == 'true'  # Convert to boolean
         self.always_on_top_checkbox.setChecked(always_on_top_bool)
-class AddDataDialog(QDialog):
 
+        # Get the saved calendar color (default to "Default" if not set)
+        saved_calendar_color = preferences.get('calendar_color', 'Default')
+        index = self.calendar_color_selector.findText(saved_calendar_color)
+        if index >= 0:
+            self.calendar_color_selector.setCurrentIndex(index)
+
+class AddDataDialog(QDialog):
     """
     A dialog window for adding data (priority or category) to the task manager.
 
@@ -1311,7 +1346,6 @@ class AddDataDialog(QDialog):
     - data_type: The type of data to be added ('priority' or 'category').
     - user_id: The user ID.
     """
-
     data_added = pyqtSignal()  # Signal to notify that new data was added
 
     def __init__(self, task_manager, data_type, user_id, parent=None):
@@ -1467,7 +1501,7 @@ class CalendarDialog(QDialog):
         tasks (list): A list of tasks associated with the user.
     """
 
-    def __init__(self, task_manager, user_id):
+    def __init__(self, task_manager, user_id, preferences_manager):
         """
         Initializes the CalendarDialog with a task manager and a user ID.
 
@@ -1485,6 +1519,8 @@ class CalendarDialog(QDialog):
         self.init_ui()
         self.load_tasks()
 
+        preferences_manager.calendar_color_changed.connect(self.update_calendar_color)
+
     def init_ui(self):
         """
         Initializes the user interface components of the dialog.
@@ -1501,6 +1537,7 @@ class CalendarDialog(QDialog):
         """
         Loads tasks from the task manager and displays them in the calendar.
         """
+        self.calendar_color = self.task_manager.get_preferences().get('calendar_color', 'yellow') # Load the calendar color preference
         self.tasks = self.task_manager.list_tasks(self.user_id)
         self.display_tasks()
 
@@ -1508,11 +1545,22 @@ class CalendarDialog(QDialog):
         """
         Updates the calendar display with task markers or indicators.
         """
+        format = QTextCharFormat()
+        format.setBackground(QColor(self.calendar_color))  # Use the selected color
+
         for task in self.tasks:
             task_date = QDate.fromString(task[2], "yyyy-MM-dd")
-            format = QTextCharFormat()
-            format.setBackground(QColor("yellow"))
             self.calendar.setDateTextFormat(task_date, format)
+
+    def update_calendar_color(self, color):
+        """
+        Update the calendar with the new color.
+
+        Args:
+            color (str): The new color for the calendar.
+        """
+        self.calendar_color = color
+        self.display_tasks()  # Refresh the display to apply the new color
 
     def date_clicked(self, date):
         """

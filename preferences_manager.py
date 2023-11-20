@@ -9,6 +9,7 @@ class PreferencesManager(QObject):
 
     # Define a signal for theme change
     theme_changed = pyqtSignal()
+    calendar_color_changed = pyqtSignal(str)
 
     def __init__(self, main_window, task_manager):
         """Initializes the PreferencesManager with the main application window and task manager.
@@ -77,15 +78,6 @@ class PreferencesManager(QObject):
         QApplication.instance().setFont(font)
 
     def apply_always_on_top(self, always_on_top):
-
-        if always_on_top:
-            self.main_window.setWindowFlag(
-                Qt.WindowType.WindowStaysOnTopHint, True)
-        else:
-            self.main_window.setWindowFlag(
-                Qt.WindowType.WindowStaysOnTopHint, False)
-
-    def apply_always_on_top(self, always_on_top):
         # Convert always_on_top to boolean if it's a string
         always_on_top_bool = always_on_top.lower() == 'true' if isinstance(always_on_top, str) else always_on_top
 
@@ -103,8 +95,16 @@ class PreferencesManager(QObject):
         except Exception as e:
             print("An error occurred while setting Always on Top:", e)
 
+    def apply_calendar_color(self, color):
+        """
+        Apply the calendar color preference.
+        """
+        self.calendar_color_changed.emit(color)
+
     def load_and_apply_preferences(self):
-        """Loads user preferences from the task manager and applies them."""
+        """
+        Loads user preferences from the task manager and applies them.
+        """
         # Retrieve preferences from the task manager
         preferences = self.task_manager.get_preferences()
 
