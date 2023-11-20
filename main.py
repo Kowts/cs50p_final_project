@@ -3,9 +3,9 @@ import sys
 import utils
 import logging
 import markdown
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMarginsF
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMarginsF, QDate
 from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
-from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QCursor
+from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QCursor, QTextCharFormat
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -42,7 +42,6 @@ DEFAULT_PASSWORD = utils.get_env_variable('DEFAULT_PASSWORD')
 
 # Initialize the task ID to row mapping dictionary
 task_row_to_id = {}
-
 class TaskTracker(QThread):
     notify_due_tasks = pyqtSignal(list)
 
@@ -337,7 +336,7 @@ class MainWindow(QMainWindow):
         priority_label = QLabel("Priority:")
         self.priority_combobox = QComboBox()
         # Load priorities from the TaskManager
-        priorities = self.task_manager.load_priorities()
+        priorities = self.task_manager.load_priorities(self.user_id)
         self.priority_combobox.addItems(priorities)
         priority_layout.addWidget(priority_label)
         priority_layout.addWidget(self.priority_combobox)
@@ -346,7 +345,7 @@ class MainWindow(QMainWindow):
         category_label = QLabel("Category:")
         self.category_combobox = QComboBox()
         # Load categories from the TaskManager
-        categories = self.task_manager.load_categories()
+        categories = self.task_manager.load_categories(self.user_id)
         self.category_combobox.addItems(categories)
         category_layout.addWidget(category_label)
         category_layout.addWidget(self.category_combobox)
@@ -395,6 +394,10 @@ class MainWindow(QMainWindow):
             value: The value to assign to the attribute.
         """
         setattr(self, attribute_name, value)
+
+    def show_calendar_dialog(self):
+        self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id)
+        self.calendar_dialog.exec()
 
     def show_date_picker(self):
         if self.date_picker_dialog.exec() == QDialog.DialogCode.Accepted:
@@ -498,6 +501,11 @@ class MainWindow(QMainWindow):
         preferences_action.triggered.connect(self.show_preferences_dialog)
         settings_menu.addAction(preferences_action)
 
+        # Create Preferences action
+        calendar_action = QAction("&Calendar", self)
+        calendar_action.triggered.connect(self.show_calendar_dialog)
+        settings_menu.addAction(calendar_action)
+
         # Create a widget to hold the table widget and add it to the main layout
         table_widget_container = QWidget()
         table_widget_container.setLayout(QVBoxLayout())
@@ -587,12 +595,12 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def show_add_priority_dialog(self):
-        dialog = AddDataDialog(self.task_manager, 'priority')
+        dialog = AddDataDialog(self.task_manager, 'priority', self.user_id)
         dialog.data_added.connect(self.update_dropdowns)
         dialog.exec()
 
     def show_add_category_dialog(self):
-        dialog = AddDataDialog(self.task_manager, 'category')
+        dialog = AddDataDialog(self.task_manager, 'category', self.user_id)
         dialog.data_added.connect(self.update_dropdowns)
         dialog.exec()
 
@@ -604,12 +612,12 @@ class MainWindow(QMainWindow):
     def update_dropdowns(self):
         # Refresh priority dropdown
         self.priority_combobox.clear()
-        priorities = self.task_manager.load_priorities()
+        priorities = self.task_manager.load_priorities(self.user_id)
         self.priority_combobox.addItems(priorities)
 
         # Refresh category dropdown
         self.category_combobox.clear()
-        categories = self.task_manager.load_categories()
+        categories = self.task_manager.load_categories(self.user_id)
         self.category_combobox.addItems(categories)
 
     def search_database(self, text, match_case, whole_word, use_regex):
@@ -773,7 +781,7 @@ class MainWindow(QMainWindow):
 
     def populate_edit_dialog(self, task_details):
         # Open a dialog to edit task details
-        edit_dialog = EditTaskDialog(task_details, self.task_manager)
+        edit_dialog = EditTaskDialog(task_details, self.task_manager, self.user_id)
         if edit_dialog.exec() == QDialog.DialogCode.Accepted:
             # Update task details in the database
             updated_details = edit_dialog.get_updated_details()
@@ -855,8 +863,9 @@ class MainWindow(QMainWindow):
                 # Handle any errors in logging the logout event, if necessary
                 logging.error(f"Error logging logout: {logout_status}")
 
-        # Close the session
+        # Close the session and Hide the main window
         self.close()
+        self.hide()
 
         # Reset the login dialog for the next login
         self.login_dialog.reset_login_dialog()
@@ -971,10 +980,11 @@ class MainWindow(QMainWindow):
         if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
             self.print_preview(printer)
 class EditTaskDialog(QDialog):
-    def __init__(self, task_details, task_manager):
+    def __init__(self, task_details, task_manager, user_id):
         super().__init__()
         self.task_details = task_details
         self.task_manager = task_manager
+        self.user_id = user_id  # Add user_id attribute
 
         self.setWindowTitle("Edit Task")
         layout = QVBoxLayout(self)
@@ -985,9 +995,9 @@ class EditTaskDialog(QDialog):
         self.priority_combobox = QComboBox()
         self.category_combobox = QComboBox()
 
-        # Populate the comboboxes with existing priorities and categories
-        self.priority_combobox.addItems(self.task_manager.load_priorities())
-        self.category_combobox.addItems(self.task_manager.load_categories())
+        # Populate the comboboxes with existing priorities and categories for the given user
+        self.priority_combobox.addItems(self.task_manager.load_priorities(self.user_id))
+        self.category_combobox.addItems(self.task_manager.load_categories(self.user_id))
 
         # Add widgets to layout
         layout.addWidget(QLabel("Task Name:"))
@@ -1125,10 +1135,11 @@ class AddDataDialog(QDialog):
 
     data_added = pyqtSignal()  # Signal to notify that new data was added
 
-    def __init__(self, task_manager, data_type, parent=None):
+    def __init__(self, task_manager, data_type, user_id, parent=None):
         super().__init__(parent)
         self.task_manager = task_manager
         self.data_type = data_type # 'priority' or 'category'
+        self.user_id = user_id  # Store the user_id
         self.setWindowTitle(f"Add {self.data_type.capitalize()}")
         self.init_ui()
 
@@ -1149,12 +1160,12 @@ class AddDataDialog(QDialog):
         data = self.data_input.text().strip()
         if data:
             if self.data_type == 'priority' and not self.task_manager.priority_exists(data):
-                self.task_manager.add_priority(data)
+                self.task_manager.add_priority(data, self.user_id)
                 utils.send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
                 self.data_added.emit()  # Emit the signal when data is added
                 self.accept()
             elif self.data_type == 'category' and not self.task_manager.category_exists(data):
-                self.task_manager.add_category(data)
+                self.task_manager.add_category(data, self.user_id)
                 utils.send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
                 self.data_added.emit()  # Emit the signal when data is added
                 self.accept()
@@ -1218,6 +1229,89 @@ class FindDialog(QDialog):
 
         # Emit the search_initiated signal instead of performing a find on the text widget
         self.search_initiated.emit(text, match_case, whole_word, use_regex)
+
+class CalendarDialog(QDialog):
+    def __init__(self, task_manager, user_id):
+        super().__init__()
+        self.setWindowTitle("Calendar")
+        self.setGeometry(300, 300, 400, 300)
+
+        self.task_manager = task_manager
+        self.user_id = user_id
+        self.init_ui()
+        self.load_tasks()
+
+    def init_ui(self):
+        self.layout = QVBoxLayout(self)
+        self.calendar = QCalendarWidget(self)
+        self.calendar.clicked.connect(self.date_clicked)
+        self.layout.addWidget(self.calendar)
+
+        self.info_label = QLabel("Select a date to view tasks", self)
+        self.layout.addWidget(self.info_label)
+
+        self.add_task_button = QPushButton("Add Task", self)
+        self.add_task_button.clicked.connect(self.add_task)
+        self.layout.addWidget(self.add_task_button)
+
+    def load_tasks(self):
+        # Load tasks from the task manager
+        self.tasks = self.task_manager.list_tasks(self.user_id)
+        self.display_tasks()
+
+    def display_tasks(self):
+        for task in self.tasks:
+            # Assuming task[2] is the due date
+            task_date = QDate.fromString(task[2], "yyyy-MM-dd")
+            format = QTextCharFormat()
+            # Color based on priority or category
+            format.setBackground(Qt.yellow)
+            self.calendar.setDateTextFormat(task_date, format)
+
+    def date_clicked(self, date):
+        # Show tasks for the clicked date
+        tasks_on_date = [task for task in self.tasks if task[2] == date.toString("yyyy-MM-dd")]
+        self.show_tasks_for_date(tasks_on_date, date)
+
+    def show_tasks_for_date(self, tasks, date):
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Tasks for {date.toString()}")
+        layout = QVBoxLayout(dialog)
+
+        # Columns: Name, Priority, Actions
+        task_table = QTableWidget(len(tasks), 3)
+        task_table.setHorizontalHeaderLabels(["Name", "Priority", "Actions"])
+        for row, task in enumerate(tasks):
+            task_table.setItem(row, 0, QTableWidgetItem(task[1]))  # Task Name
+            task_table.setItem(row, 1, QTableWidgetItem(task[3]))  # Priority
+
+            # Edit and Delete buttons
+            btn_layout = QHBoxLayout()
+            edit_btn = QPushButton("Edit")
+            edit_btn.clicked.connect(lambda _, t=task: self.edit_task(t))
+            delete_btn = QPushButton("Delete")
+            delete_btn.clicked.connect(lambda _, t_id=task[0]: self.delete_task(t_id))
+            btn_layout.addWidget(edit_btn)
+            btn_layout.addWidget(delete_btn)
+            cell_widget = QWidget()
+            cell_widget.setLayout(btn_layout)
+            task_table.setCellWidget(row, 2, cell_widget)
+
+        layout.addWidget(task_table)
+        dialog.exec()
+
+    def edit_task(self, task):
+        # Open dialog to edit the selected task
+        pass
+
+    def delete_task(self, task_id):
+        # Confirm and delete the task, then refresh the calendar
+        pass
+
+    def add_task(self):
+        selected_date = self.calendar.selectedDate()
+        # Add task logic for the selected date
+        pass
 
 def main():
     app = QApplication(sys.argv)
