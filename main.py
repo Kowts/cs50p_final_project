@@ -31,8 +31,8 @@ from PyQt6.QtWidgets import (
     QFileDialog
 )
 from task_manager import TaskManager
-from notification_manager import NotificationManager
-from preferences_manager import PreferencesManager
+from notification import NotificationManager
+from preferences import PreferencesManager
 
 # Setup logging as soon as possible, ideally at the start of the application
 utils.setup_logging()
@@ -1591,6 +1591,7 @@ class CalendarDialog(QDialog):
             QTableWidget.SelectionBehavior.SelectRows)
 
         for row, task in enumerate(tasks):
+
             name_item = QTableWidgetItem(task[1])
             priority_item = QTableWidgetItem(task[3])
             category_item = QTableWidgetItem(task[4])
@@ -1668,7 +1669,6 @@ def main():
     except ValueError as e:
         logging.error(f"Environment variable validation error: {e}")
         # Handle the error (e.g., log, inform the user, exit the application)
-
 
 if __name__ == "__main__":
     main()
