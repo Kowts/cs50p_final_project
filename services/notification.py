@@ -1,9 +1,16 @@
+import os
 import datetime
 import logging
-import utils
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from typing import Tuple, List
+from helpers.utils import setup_logging, get_env_variable, send_windows_notification
 
 # Initialize logging at the start of the application for consistent and centralized logging.
-utils.setup_logging()
+setup_logging()
 
 class NotificationManager:
     """Manages notifications, ensuring they are sent based on predefined frequencies."""
@@ -37,7 +44,6 @@ class NotificationManager:
             elif frequency == "weekly":
                 # Check if the notification was sent in the current calendar week
                 return current_time.isocalendar()[1] != last_sent_time.isocalendar()[1]
-            # ... more frequency checks ...
             elif frequency == "immediate":
                 # Send immediately regardless of the last sent time
                 return True
@@ -71,7 +77,7 @@ class NotificationManager:
 
             if enable_notifications and self.should_send_notification(notification_id, frequency):
                 # Send the notification if enabled and frequency conditions are met
-                success = utils.send_windows_notification(
+                success = send_windows_notification(
                     title, message, task_manager, timeout, app_name)
                 if success:
                     # Update the last sent time on successful notification
@@ -90,3 +96,91 @@ class NotificationManager:
             # Log any exceptions encountered during notification sending
             logging.error(f"Error in sending notification: {e}")
             return False
+
+    def connect_smtp(self) -> Tuple[smtplib.SMTP, str]:
+        """
+        Connects to the SMTP server using the provided credentials and returns the SMTP server object and the username.
+
+        Returns:
+            A tuple containing the SMTP server object and the username.
+
+        Raises:
+            ValueError: If there is an error fetching the SMTP credentials.
+            smtplib.SMTPException: If there is an error connecting to the SMTP server.
+        """
+        try:
+            # Get SMTP credentials
+            username = get_env_variable('SMTP_USER')
+            password = get_env_variable('SMTP_PASS')
+            server = get_env_variable('SMTP_URL')
+            port = get_env_variable('SMTP_PORT')
+
+        except ValueError as e:
+            # Log and re-raise any exceptions encountered while fetching credentials
+            logging.error(f"Failed to get SMTP credentials: {e}")
+            raise
+
+        try:
+            # Connect to the SMTP server
+            smtp_server = smtplib.SMTP(server, port)
+            # Upgrade the connection to a secure encrypted SSL/TLS connection
+            smtp_server.starttls()
+            # Login to the SMTP server
+            smtp_server.login(username, password)
+        except smtplib.SMTPException as e:
+            # Log and re-raise any exceptions encountered while connecting to the SMTP server
+            logging.error(f"Failed to connect to SMTP server: {e}")
+            raise
+
+        # Return the SMTP server object and the username
+        return smtp_server, username
+
+    def send_email(self, recipient_email: str, subject: str, message_body: str, attachment_paths: List[str] = []) -> None:
+        """
+        Sends an email with optional attachments.
+
+        Parameters:
+        - recipient_email: The email address of the recipient.
+        - subject: The subject of the email.
+        - message_body: The body of the email.
+        - attachment_paths: A list of file paths to attach to the email.
+        """
+
+        # Connect to the SMTP server
+        server, username = self.connect_smtp()
+
+        try:
+            # Create a message object
+            msg = MIMEMultipart()
+            msg['From'] = username
+            msg['To'] = recipient_email
+            msg['Subject'] = subject  # No need to encode as bytes
+
+            # Attach the HTML message to the email
+            # Specify UTF-8 encoding for the message body
+            msg.attach(MIMEText(message_body, 'html', 'utf-8'))
+
+            # Attach the files if attachment_paths is not empty
+            if attachment_paths:
+                for attachment_path in attachment_paths:
+                    if os.path.isfile(attachment_path):
+                        # Use 'with' statement to ensure the file is closed properly
+                        with open(attachment_path, 'rb') as attachment:
+                            part = MIMEBase('application', 'octet-stream')
+                            part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                        part.add_header('Content-Disposition', f"attachment; filename= {attachment_path}")
+                        msg.attach(part)
+
+            # Send the email
+            server.sendmail(username, recipient_email, msg.as_string())
+            logging.info("E-mail sent successfully!")
+        except smtplib.SMTPException as e:
+            # Log SMTP exceptions
+            logging.error(f"Error sending email: {str(e)}")
+        except Exception as e:
+            # Log other exceptions
+            logging.error(f"An error occurred: {str(e)}")
+        finally:
+            # Close the SMTP connection
+            server.quit()

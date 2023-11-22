@@ -11,8 +11,13 @@ import logging
 # Load environment variables from a .env file for configuration management.
 load_dotenv()
 
+# Centralized configuration for regular expressions
+REGEX_PATTERNS = {
+    'password': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()]).{8,}$',
+    'email': r"[^@]+@[^@]+\.[^@]+"
+}
 
-def setup_logging(level=logging.DEBUG, filename='app.log'):
+def setup_logging(level=logging.DEBUG, filename='app.log', handler=logging.FileHandler):
     """
     Set up the logging configuration for the application.
 
@@ -20,7 +25,12 @@ def setup_logging(level=logging.DEBUG, filename='app.log'):
         level: The logging level (e.g., DEBUG, INFO).
         filename: The name of the file where logs will be stored.
     """
-    logging.basicConfig(level=level, filename=filename, format='%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    log_handler = handler(filename)
+    log_handler.setLevel(level)
+    log_handler.setFormatter(formatter)
+
+    logging.basicConfig(level=level, handlers=[log_handler])
 
 def get_db_connection(db_file):
     """
@@ -36,7 +46,11 @@ def get_db_connection(db_file):
         sqlite3.Error: If a connection error occurs.
     """
     try:
-        return sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file)
+        return conn
+    except sqlite3.OperationalError as e:
+        logging.error(f"Operational error in database connection: {e}")
+        raise
     except sqlite3.Error as e:
         logging.error(f"Database connection error: {e}")
         raise
@@ -98,9 +112,11 @@ def is_valid_password(password):
     Returns:
         True if the password meets the criteria, False otherwise.
     """
-    password_pattern = re.compile(
-        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()]).{8,}$')
-    return bool(password_pattern.match(password))
+    pattern = re.compile(REGEX_PATTERNS['password'])
+    valid = bool(pattern.match(password))
+    if not valid:
+        return False, "Password must contain at least one uppercase, one lowercase, one number, one special character, and be at least 8 characters long."
+    return True, ""
 
 
 def is_valid_email(email):
@@ -113,8 +129,8 @@ def is_valid_email(email):
     Returns:
         True if the email is in a proper format, False otherwise.
     """
-    pattern = re.compile(r"[^@]+@[^@]+\.[^@]+")
-    return bool(pattern.match(email))
+    pattern = re.compile(REGEX_PATTERNS['email'])
+    return bool(pattern.match(email)), "Invalid email format."
 
 
 def get_env_variable(var_name, default=None):
@@ -158,35 +174,20 @@ def parse_datetime(date_time_str, format="%Y-%m-%d %H:%M:%S"):
     """
     return QDateTime.fromString(date_time_str, format)
 
-
-def show_error(title, message):
-    """
-    Display an error message box.
-
-    Args:
-        title: The title of the message box.
-        message: The error message to display.
-    """
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Icon.Critical)
-    msg.setWindowTitle(title)
-    msg.setText(message)
-    msg.exec()
-
-
-def show_message(title, message):
+def show_dialog(title, message, icon=QMessageBox.Icon.Information):
     """
     Display a general message box.
 
     Args:
         title: The title of the message box.
         message: The message to display.
+        icon: QMessageBox.Icon.Critical or QMessageBox.Icon.Information
     """
     msg = QMessageBox()
+    msg.setIcon(icon)
     msg.setWindowTitle(title)
     msg.setText(message)
     msg.exec()
-
 
 def send_windows_notification(title: str, message: str, task_manager, timeout: int = 10, app_name: str = 'YourApp') -> bool:
     """
@@ -204,22 +205,14 @@ def send_windows_notification(title: str, message: str, task_manager, timeout: i
     """
     try:
         preferences = task_manager.get_preferences()
-        enable_notifications = preferences.get(
-            'enable_notifications', 'True') == 'True'
+        enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
 
         if enable_notifications:
-            notification.notify(
-                title=title,
-                message=message,
-                app_name=app_name,
-                timeout=timeout
-            )
-            logging.info(
-                f"Sent Windows notification: Title='{title}', Message='{message}', Timeout={timeout}, App Name='{app_name}'")
+            notification.notify(title=title,message=message,app_name=app_name,timeout=timeout)
+            logging.info(f"Sent Windows notification: Title='{title}', Message='{message}', Timeout={timeout}, App Name='{app_name}'")
             return True
         else:
-            logging.info(
-                "Notification not sent: User has disabled notifications")
+            logging.info("Notification not sent: User has disabled notifications")
             return False
     except Exception as e:
         logging.error(f"Error sending Windows notification: {str(e)}")

@@ -1,20 +1,20 @@
 import os
 import re
 import csv
-import sqlite3, utils
+import sqlite3
 from PyQt6.QtCore import QDateTime
-from dotenv import load_dotenv
 import datetime
 import logging
 from enum import Enum
+from helpers.utils import setup_logging, get_env_variable, is_valid_email, is_valid_username, is_valid_password, is_valid_task_name, hash_password, format_datetime
 
 # Initialize logging configuration at application startup
-utils.setup_logging()
+setup_logging()
 
 # Constants for database file and default values, loaded from environment variables
-DATABASE_FILE = utils.get_env_variable('DATABASE_FILE')
-DEFAULT_PRIORITIES = utils.get_env_variable('DEFAULT_PRIORITIES').split(',')
-DEFAULT_CATEGORIES = utils.get_env_variable('DEFAULT_CATEGORIES').split(',')
+DATABASE_FILE = get_env_variable('DATABASE_FILE')
+DEFAULT_PRIORITIES = get_env_variable('DEFAULT_PRIORITIES').split(',')
+DEFAULT_CATEGORIES = get_env_variable('DEFAULT_CATEGORIES').split(',')
 
 class DefaultStatus(Enum):
     """Enum for default status values."""
@@ -54,22 +54,22 @@ class TaskManager:
         """
         # List of required environment variables
         required_vars = ['DATABASE_FILE', 'MAX_CONNECTION', 'DEFAULT_USER', 'DEFAULT_PASSWORD']
-        missing_vars = [var for var in required_vars if not utils.get_env_variable(var)]
+        missing_vars = [var for var in required_vars if not get_env_variable(var)]
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
         if not os.path.exists(self.db_file):
             raise ValueError(f"The specified database file {self.db_file} does not exist.")
 
-        max_connection = utils.get_env_variable('MAX_CONNECTION')
+        max_connection = get_env_variable('MAX_CONNECTION')
         if max_connection and not max_connection.isdigit():
             raise ValueError("MAX_CONNECTION must be a numeric value.")
 
         if max_connection and not 1 <= int(max_connection) <= 100:
             raise ValueError("MAX_CONNECTION must be between 1 and 100.")
 
-        admin_email = utils.get_env_variable('ADMIN_EMAIL')
-        if admin_email and not utils.is_valid_email(admin_email):
+        admin_email = get_env_variable('ADMIN_EMAIL')
+        if admin_email and not is_valid_email(admin_email):
             raise ValueError("Invalid email format for ADMIN_EMAIL.")
 
     def setup_database(self):
@@ -113,6 +113,7 @@ class TaskManager:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
+                email TEXT,
                 password TEXT NOT NULL,
                 salt TEXT NOT NULL,
                 created_at TEXT NOT NULL,
@@ -259,7 +260,7 @@ class TaskManager:
             cursor.execute("SELECT 1 FROM priorities WHERE name = ?", (priority_name,))
             return cursor.fetchone() is not None
 
-    def add_priority(self, priority_name, user_id):
+    def add_priority(self, priority_name, color, user_id):
         """
         Adds a new priority to the priorities table.
 
@@ -274,7 +275,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO priorities (user_id, name, created_at, status) VALUES (?, ?, ?, ?)", (user_id, priority_name, current_time, 1))
+                cursor.execute("INSERT INTO priorities (user_id, name, color, created_at, status) VALUES (?, ?, ?, ?, ?)", (user_id, priority_name, color, current_time, 1))
                 conn.commit()  # Make sure to commit the changes
             return f"Priority '{priority_name}' added successfully."
         except sqlite3.Error as e:
@@ -338,6 +339,37 @@ class TaskManager:
             logging.error(f"An error occurred: {e}")
             return []  # Provides an empty list as a default response
 
+    def get_user_data(self, user_id):
+        """
+        Fetches user data from the database based on the user ID.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            dict: A dictionary containing user data (username, email, etc.) or None if not found.
+        """
+        try:
+            with self.get_db_connection() as conn:
+                cursor = conn.cursor()
+
+                # Assuming the users table has columns like 'id', 'username', 'email', etc.
+                query = "SELECT username, email FROM users WHERE id = ?"
+                cursor.execute(query, (user_id,))
+
+                user_data = cursor.fetchone()
+                if user_data:
+                    return {
+                        "username": user_data[0],
+                        "email": user_data[1]
+                    }
+                else:
+                    return None
+
+        except Exception as e:
+            logging.error(f"An error occurred while fetching user data: {e}")
+            return None
+
     def create_user(self, username, password):
         """
         Creates a new user in the database.
@@ -349,14 +381,14 @@ class TaskManager:
         Returns:
             None if successful, an error message otherwise.
         """
-        if not utils.is_valid_username(username) or not utils.is_valid_password(password):
+        if not is_valid_username(username) or not is_valid_password(password):
             raise ValueError("Invalid username or password")
 
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                hashed_password, salt = utils.hash_password(password)
-                created_at = utils.format_datetime(QDateTime.currentDateTime())
+                hashed_password, salt = hash_password(password)
+                created_at = format_datetime(QDateTime.currentDateTime())
                 user_status = DefaultStatus.ACTIVE.value
                 cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)", (username, hashed_password, salt, created_at, user_status))
             return None
@@ -378,13 +410,12 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT id, password, salt FROM users WHERE username = ?", (username,))
+                cursor.execute("SELECT id, password, salt FROM users WHERE username = ?", (username,))
                 stored_data = cursor.fetchone()
 
                 if stored_data:
                     user_id, stored_hashed_password, salt = stored_data
-                    hashed_password, _ = utils.hash_password(password, salt)
+                    hashed_password, _ = hash_password(password, salt)
 
                     if stored_hashed_password == hashed_password:
                         return True, user_id
@@ -392,6 +423,32 @@ class TaskManager:
 
         except sqlite3.Error:
             return False, None  # Return False if there's an error during the operation
+
+    def update_user_profile(self, user_id, username, email):
+        """
+        Updates the user's profile information in the database.
+
+        Args:
+            user_id (int): The ID of the user whose profile is being updated.
+            username (str): The username of the user.
+            email (str): The new email address of the user.
+
+        Returns:
+            str: A success message or an error message.
+        """
+        try:
+            with self.get_db_connection() as conn:
+                cursor = conn.cursor()
+                # Prepare the update query. You might have more fields to update.
+                query = "UPDATE users SET username = ?, email = ? WHERE id = ?"
+                # Execute the query with new email and user_id
+                cursor.execute(query, (username, email, user_id))
+                # Commit the changes
+                conn.commit()
+                return True
+        except Exception as e:
+            logging.error(f"An error occurred while updating user profile: {e}")
+            return False
 
     def log_user_activity(self, username, event_type, status=None):
         """
@@ -408,7 +465,7 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                created_at = utils.format_datetime(QDateTime.currentDateTime())
+                created_at = format_datetime(QDateTime.currentDateTime())
                 cursor.execute("INSERT INTO user_activity (username, type, created_at, status) VALUES (?, ?, ?, ?)", (username, event_type, created_at, status))
                 return None
         except sqlite3.Error as e:
@@ -428,7 +485,7 @@ class TaskManager:
         Returns:
             None and the task ID if successful, an error message and None otherwise.
         """
-        if not utils.is_valid_task_name(task_name):
+        if not is_valid_task_name(task_name):
             raise ValueError("Invalid task name.")
 
         try:
@@ -488,21 +545,27 @@ class TaskManager:
 
     def list_tasks(self, user_id, status=None):
         """
-        Lists tasks based on their status.
+        Lists tasks along with priority color based on their status and user ID.
 
         Args:
             user_id: The ID of the user.
             status: The status of the tasks to list. If None, lists active tasks.
 
         Returns:
-            A list of tasks matching the given status, empty list in case of an error.
+            A list of tasks with priority color matching the given status, empty list in case of an error.
         """
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                query = 'SELECT id, name, due_date, priority, category FROM tasks WHERE user_id = ? and status = ?'
+                # Modified query to join tasks with priorities and fetch the color
+                query = '''
+                SELECT t.id, t.name, t.due_date, t.priority, t.category, p.color
+                FROM tasks t
+                LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
+                WHERE t.user_id = ? AND t.status = ?
+                '''
                 cursor.execute(query, (user_id, status or DefaultStatus.ACTIVE.value))
-                return cursor.fetchall()  # Returns a list of tasks
+                return cursor.fetchall()  # Returns a list of tasks with priority color
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
             return []
@@ -618,11 +681,10 @@ class TaskManager:
                     for row in reader:
                         # Ensure each row has the required number of elements
                         if len(row) >= 5:
-                            print(row)
                             task_name, due_date, priority, category = row[1:5]
 
                             # Validate the task name
-                            if not utils.is_valid_task_name(task_name):
+                            if not is_valid_task_name(task_name):
                                 raise ValueError(f"Invalid task name: {task_name}")
 
                             # Prepare other task details and insert into the database
@@ -632,12 +694,11 @@ class TaskManager:
                                 (user_id, task_name, due_date, priority,category, created_at, DefaultStatus.ACTIVE.value)
                             )
                         else:
-                            print(f"Skipping incomplete row: {row}")
+                            logging.error(f"Skipping incomplete row: {row}")
             return "Import successful"
         except Exception as e:
             # Error handling with detailed message
             return f"Import failed: {str(e)}"
-
 
     def get_preferences(self):
         """

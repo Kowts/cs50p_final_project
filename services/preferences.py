@@ -1,8 +1,18 @@
 from PyQt6.QtCore import Qt, QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 from qt_material import apply_stylesheet
+import logging
+from helpers.utils import setup_logging
+
+# Setup logging as soon as possible, ideally at the start of the application
+setup_logging()
 
 DEFAULT_STYLESHEET = ""  # or define your default styles here
+THEME_MAP = {
+    'Dark': 'dark_blue.xml',
+    'Light': 'light_blue.xml',
+    'Default': DEFAULT_STYLESHEET
+}
 
 class PreferencesManager(QObject):
     """Manages user preferences for the application's UI and functionalities."""
@@ -33,21 +43,15 @@ class PreferencesManager(QObject):
 
         # Convert the font size to a string with 'px' suffix
         font_size_px = f'{font_size}px'
-        extra = {
-            'font_size': font_size_px,
-        }
+        extra = {'font_size': font_size_px}
 
-        if theme_name == 'Dark':
-            # Apply a dark theme with blue accents
-            apply_stylesheet(app, theme='dark_blue.xml', extra=extra)
-        elif theme_name == 'Light':
-            # Apply a light theme with blue accents and inverted secondary colors
-            apply_stylesheet(app, theme='light_blue.xml', extra=extra, invert_secondary=True)
+        # Get the theme file or default to empty string
+        theme_file = THEME_MAP.get(theme_name, '')
+        if theme_file.endswith('.xml'):
+            apply_stylesheet(app, theme=theme_file, extra=extra)
         elif theme_name == 'Default':
-            # Reset to the application's default theme
             app.setStyleSheet(DEFAULT_STYLESHEET)
         else:
-            # Handle other themes or reset to default if an unknown theme is passed
             app.setStyleSheet("")  # Fallback to PyQt's built-in styles
 
         # Apply the font size at the end
@@ -101,17 +105,54 @@ class PreferencesManager(QObject):
         """
         self.calendar_color_changed.emit(color)
 
+    def validate_font_size(self, font_size):
+        """
+        Validates the font size preference.
+
+        Args:
+            font_size (str): The font size to validate, typically provided as a string like '12pt'.
+
+        Returns:
+            str: A validated font size, with a fallback to a default value if the input is invalid.
+        """
+
+        # Define minimum and maximum allowable font sizes
+        min_font_size = 8
+        max_font_size = 24
+
+        # Default font size to use if validation fails
+        default_font_size = '10pt'
+
+        try:
+            # Extract the numeric part of the font size (e.g., '12' from '12pt')
+            size = int(font_size.replace('pt', ''))
+
+            # Check if the font size is within the acceptable range
+            if min_font_size <= size <= max_font_size:
+                return font_size
+            else:
+                # If the size is outside the range, log a warning and return the default size
+                logging.warning(f"Font size {font_size} is out of range. Using default size {default_font_size}.")
+                return default_font_size
+        except ValueError:
+            # If the font size string cannot be converted to an integer, log an error and return the default size
+            logging.error(f"Invalid font size format: {font_size}. Using default size {default_font_size}.")
+            return default_font_size
+
     def load_and_apply_preferences(self):
         """
         Loads user preferences from the task manager and applies them.
         """
-        # Retrieve preferences from the task manager
-        preferences = self.task_manager.get_preferences()
+        try:
+            # Retrieve preferences from the task manager
+            preferences = self.task_manager.get_preferences()
 
-        font_size = preferences.get('font_size', '10')
+            font_size = self.validate_font_size(preferences.get('font_size', '10'))
 
-        # Apply each preference
-        self.apply_theme(preferences.get('theme', ''), font_size)
-        self.apply_font_size(font_size)
-        self.apply_notification_setting(preferences.get('enable_notifications', True))
-        self.apply_always_on_top(preferences.get('always_on_top', False))
+            # Apply each preference
+            self.apply_theme(preferences.get('theme', ''), font_size)
+            self.apply_font_size(font_size)
+            self.apply_notification_setting(preferences.get('enable_notifications', True))
+            self.apply_always_on_top(preferences.get('always_on_top', False))
+        except Exception as e:
+            print("Error loading and applying preferences:", e)
