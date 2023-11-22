@@ -1,39 +1,12 @@
-import re
-import sys
-import utils
-import logging
-import markdown
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMarginsF, QDate
-from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
-from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QCursor, QColor, QTextCharFormat, QIcon, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QWidget,
-    QColorDialog,
-    QCheckBox,
-    QTextBrowser,
     QVBoxLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QTextEdit,
-    QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
     QMessageBox,
-    QComboBox,
-    QCalendarWidget,
     QDialog,
-    QDialogButtonBox,
-    QSizePolicy,
-    QFileDialog
+    QDialogButtonBox
 )
 from models.task_manager import TaskManager
-from notification import NotificationManager
-from preferences import PreferencesManager
-
 
 class UserProfileDialog(QDialog):
     def __init__(self, task_manager: TaskManager, user_id):
@@ -84,8 +57,7 @@ class UserProfileDialog(QDialog):
         updated_email = self.email_input.text()
 
         if not updated_username or not updated_email:
-            QMessageBox.warning(self, "Invalid Data",
-                                "Please fill all fields.")
+            QMessageBox.warning(self, "Invalid Data", "Please fill all fields.")
             return
 
         success = self.task_manager.update_user_profile(
