@@ -30,12 +30,12 @@ from PyQt6.QtWidgets import (
 
 from models.task_manager import TaskManager
 from models.task_tracker import TaskTracker
-from dialogs.login_dialog import LoginDialog
-from dialogs.preferences_dialog import PreferencesDialog
-from dialogs.edit_task_dialog import EditTaskDialog
-from dialogs.calendar_dialog import CalendarDialog
-from dialogs.user_profile_dialog import UserProfileDialog
-from dialogs.find_dialog import FindDialog
+from ui.dialogs.login_dialog import LoginDialog
+from ui.dialogs.preferences_dialog import PreferencesDialog
+from ui.dialogs.edit_task_dialog import EditTaskDialog
+from ui.dialogs.calendar_dialog import CalendarDialog
+from ui.dialogs.user_profile_dialog import UserProfileDialog
+from ui.dialogs.find_dialog import FindDialog
 from services.notification import NotificationManager
 from services.preferences import PreferencesManager
 from helpers.utils import show_dialog, send_windows_notification
@@ -381,7 +381,7 @@ class MainWindow(QMainWindow):
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(version)
 
-        copyright = QLabel("Copyright © 2023 Code Center")
+        copyright = QLabel("Copyright © 2023 CS50P")
         copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(copyright)
 
@@ -389,17 +389,6 @@ class MainWindow(QMainWindow):
         developer = QLabel("Developer - Joselito Coutinho")
         developer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(developer)
-
-        # Contact
-        contact = QLabel("joselitocoutinho92@gmail.com")
-        contact.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(contact)
-
-        website = QLabel(
-            "<a href='https://www.codecenter.info/'>www.codecenter.info</a>")
-        website.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        website.setOpenExternalLinks(True)
-        layout.addWidget(website)
 
         # Buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
@@ -948,9 +937,10 @@ class AddDataDialog(QDialog):
         Save the entered data to the task manager.
         """
         data = self.data_input.text().strip()
-        color = self.color_input.text().strip()
+
         if data:
             if self.data_type == 'priority' and not self.task_manager.priority_exists(data):
+                color = self.color_input.text().strip()
                 self.task_manager.add_priority(data, color, self.user_id)
                 send_windows_notification(
                     "Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
