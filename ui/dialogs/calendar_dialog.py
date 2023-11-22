@@ -9,9 +9,8 @@ from PyQt6.QtWidgets import (
     QDialog
 )
 from models.task_manager import TaskManager
-from notification import NotificationManager
-from preferences import PreferencesManager
-
+from services.notification import NotificationManager
+from services.preferences import PreferencesManager
 
 class CalendarDialog(QDialog):
     """
