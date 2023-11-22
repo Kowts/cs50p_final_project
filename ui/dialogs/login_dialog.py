@@ -1,8 +1,9 @@
 import sys
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout
 from PyQt6.QtGui import QCursor, QShortcut, QKeySequence
 from models.task_manager import TaskManager
-
+from ui.dialogs.registration_dialog import RegistrationDialog
 class LoginDialog(QDialog):
     def __init__(self, task_manager: TaskManager, main_window, preferences_manager=None):
         """
@@ -53,8 +54,7 @@ class LoginDialog(QDialog):
         # Create the LOGIN header label
         login_title_label = QLabel("LOGIN")
         login_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        login_title_label.setStyleSheet(
-            "font-size: 16px; font-weight: bold; color: #1d1f21;")
+        login_title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #1d1f21;")
         login_layout.addWidget(login_title_label)
 
         # Username input section
