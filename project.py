@@ -1,11 +1,6 @@
 import sys
-
 import logging
-from PyQt6.QtWidgets import (
-    QApplication,
-    QMessageBox,
-    QDialog
-)
+from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog
 from models.task_manager import TaskManager
 from ui.main_window import MainWindow
 from ui.dialogs.login_dialog import LoginDialog
@@ -19,61 +14,111 @@ setup_logging()
 DEFAULT_USER = get_env_variable('DEFAULT_USER')
 DEFAULT_PASSWORD = get_env_variable('DEFAULT_PASSWORD')
 
+def create_user(username, password):
+    """
+    Creates a new user in the system with the given username and password.
+
+    Args:
+        username (str): The username for the new user.
+        password (str): The password for the new user.
+
+    Returns:
+        str: An error message if the user creation fails, otherwise None.
+    """
+    try:
+        task_manager = TaskManager()
+        return task_manager.create_user(username, password)
+    except Exception as e:
+        logging.error(f"Error creating user: {e}")
+        return str(e)
+
+
+def login_user(username, password):
+    """
+    Authenticates a user based on username and password.
+
+    Args:
+        username (str): The username of the user.
+        password (str): The password of the user.
+
+    Returns:
+        tuple: A tuple containing a boolean indicating success or failure,
+               and the user ID if successful, None otherwise.
+    """
+    try:
+        task_manager = TaskManager()
+        return task_manager.verify_user(username, password)
+    except Exception as e:
+        logging.error(f"Error in user login: {e}")
+        return False, None
+
+
+def fetch_tasks(user_id):
+    """
+    Fetches tasks for a given user.
+
+    Args:
+        user_id (int): The ID of the user whose tasks are to be fetched.
+
+    Returns:
+        list: A list of tasks for the given user. Returns an empty list if
+              there's an error or if the user has no tasks.
+    """
+    try:
+        task_manager = TaskManager()
+        return task_manager.list_tasks(user_id)
+    except Exception as e:
+        logging.error(f"Error fetching tasks for user {user_id}: {e}")
+        return []
+
 def main():
     """
-    Main entry point of the application.
-    Initializes the QApplication, TaskManager, MainWindow, LoginDialog, and PreferencesManager.
-    Checks for existing users and creates a default user if none exist.
-    Displays the login dialog and shows the main window if login is successful.
-    Handles any value errors that occur during execution.
+    The main function of the program.
+    This function initializes the application, task manager, and other necessary components.
+    It checks for existing users and creates a default user if necessary.
+    It displays the login dialog and handles the login process.
+    If the login is successful, it fetches tasks for the logged-in user and starts the main window.
     """
-    app = QApplication(sys.argv)
-
     try:
-        # Create an instance of TaskManager
-        task_manager = TaskManager()
+        app = QApplication(sys.argv)  # Initialize the QApplication object
+        task_manager = TaskManager()  # Create an instance of TaskManager
 
-        # Initialize MainWindow with task_manager
-        main_window = MainWindow(task_manager, login_dialog=None)
-
-        # Create the login dialog instance with main_window
-        login_dialog = LoginDialog(task_manager, main_window)
-
-        # Set the login_dialog attribute in main_window
-        main_window.login_dialog = login_dialog
-
-        # Initialize PreferencesManager with main_window and task_manager
-        preferences_manager = PreferencesManager(main_window, task_manager)
-
-        # Set preferences_manager in login_dialog
-        login_dialog.preferences_manager = preferences_manager
-
-        # Check if there are existing users
+        # Check for existing users and create default user if necessary
         existing_users = task_manager.get_existing_users()
         if not existing_users:
-            # Create a default user if no users exist
-            error_message = task_manager.create_user(
-                DEFAULT_USER, DEFAULT_PASSWORD)
+            # Create a default user if no users are found in the system
+            error_message = create_user(DEFAULT_USER, DEFAULT_PASSWORD)
             if error_message:
+                # Display an error dialog if user creation fails
                 show_dialog("User Creation Error", error_message, icon=QMessageBox.Icon.Critical)
             else:
                 logging.info(f"Default user '{DEFAULT_USER}' created with password '{DEFAULT_PASSWORD}'")
-        else:
-            logging.warning("Users already exist in the database.")
 
+        # Initialize main window, login dialog, and preferences manager
+        main_window = MainWindow(task_manager, None)
+        login_dialog = LoginDialog(task_manager, main_window)
+        main_window.login_dialog = login_dialog
+        preferences_manager = PreferencesManager(main_window, task_manager)
+        login_dialog.preferences_manager = preferences_manager
+
+        # Show the login dialog and proceed if login is successful
         if login_dialog.exec() == QDialog.DialogCode.Accepted:
-            # Show the main window only if login is successful
-            user_id = login_dialog.get_user_id()  # Retrieve the user_id
-            main_window = MainWindow(task_manager, login_dialog, user_id)
-            main_window.start_task_tracker()  # Start the task tracker here
-            main_window.show()
-            sys.exit(app.exec())
-        else:
-            logging.error("Login failed.")
+            user_id = login_dialog.get_user_id()
+            valid_login, fetched_user_id = login_user(DEFAULT_USER, DEFAULT_PASSWORD)
+            if valid_login and fetched_user_id == user_id:
+                # Fetch the tasks for the logged-in user and initialize the main window with these tasks
+                tasks = fetch_tasks(user_id)
+                # Start the main window with fetched tasks (this step may vary based on your implementation)
+                main_window = MainWindow(task_manager, login_dialog, user_id, tasks)
+                main_window.start_task_tracker()  # Start the task tracker in the main window
+                main_window.show()  # Show the main window
+                sys.exit(app.exec())  # Start the application's event loop
+            else:
+                logging.error("Login failed.")
 
     except ValueError as e:
+        # Log and handle environment variable validation errors
         logging.error(f"Environment variable validation error: {e}")
-        # Handle the error (e.g., log, inform the user, exit the application)
 
 if __name__ == "__main__":
-    main()
+    main()  # Execute the main function
