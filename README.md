@@ -81,7 +81,7 @@ pip install PyQt6
 
    ```bash
    git clone https://github.com/Kowts/cs50p_final_project.git
-   cd task-manager-app
+   cd cs50p_final_project
    ```
 
 2. **Set Up Environment Variables**
@@ -121,10 +121,10 @@ pip install PyQt6
 
 ### Running the Application
 
-To run the application, execute the `main.py` script from the command line:
+To run the application, execute the `project.py` script from the command line:
 
 ```bash
-python main.py
+python project.py
 ```
 
 This will launch the Task Manager application. You can log in using the default credentials or create a new account.
