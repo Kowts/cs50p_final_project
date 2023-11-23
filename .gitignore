@@ -26,6 +26,3 @@ __pycache__/
 # Logs
 *log.txt
 *.log
-
-# Python
-test_*.py
