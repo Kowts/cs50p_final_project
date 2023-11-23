@@ -7,10 +7,10 @@ from ui.dialogs.login_dialog import LoginDialog
 from services.preferences import PreferencesManager
 from helpers.utils import setup_logging, get_env_variable, show_dialog
 
-# Setup logging as soon as possible, ideally at the start of the application
+# Setup logging early for consistent application-wide debugging and tracking
 setup_logging()
 
-# Constants
+# Constants for default user credentials, loaded from environment variables
 DEFAULT_USER = get_env_variable('DEFAULT_USER')
 DEFAULT_PASSWORD = get_env_variable('DEFAULT_PASSWORD')
 
@@ -71,6 +71,7 @@ def fetch_tasks(user_id):
         logging.error(f"Error fetching tasks for user {user_id}: {e}")
         return []
 
+
 def main():
     """
     The main function of the program.
@@ -83,7 +84,7 @@ def main():
         app = QApplication(sys.argv)  # Initialize the QApplication object
         task_manager = TaskManager()  # Create an instance of TaskManager
 
-        # Check for existing users and create default user if necessary
+        # Check for existing users in the system; create a default user if none found
         existing_users = task_manager.get_existing_users()
         if not existing_users:
             # Create a default user if no users are found in the system
