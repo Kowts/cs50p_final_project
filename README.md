@@ -11,6 +11,12 @@ Task Manager is a PyQt-based desktop application designed to streamline personal
 - **Search Functionality**: Quickly find tasks with a powerful search feature.
 - **Printing Capability**: Print out task lists for offline reference.
 - **User Customization**: Set preferences such as themes and notification settings.
+- **User Authentication**: Secure login and registration system for user accounts.
+- **User Preferences**: Customize application settings such as themes, notification preferences, and more.
+- **Priority and Category Management**: Organize tasks with custom priorities and categories.
+- **Calendar Integration**: View tasks in a calendar format and manage deadlines.
+- **Database Integration**: Robust SQLite database integration for storing tasks and user information.
+- **Responsive UI**: A modern and responsive user interface built with PyQt6.
 
 ## Project Structure
 
@@ -83,9 +89,26 @@ pip install PyQt6
    Set the necessary environment variables. You can do this by creating a `.env` file in the root directory and adding the required configurations. For example:
 
    ```
-   DATABASE_FILE=path/to/your/database.db
-   DEFAULT_USER=admin
-   DEFAULT_PASSWORD=password
+    # Database Configuration
+    DATABASE_FILE=database.db
+    MAX_CONNECTION=10
+
+    # Default Values
+    DEFAULT_PRIORITIES=Low,Medium,High
+    DEFAULT_CATEGORIES=Work,Personal,Shopping,Other
+    FONT_SIZE=8,10,12,14,16,18,20,24
+    THEME=Default,Light,Dark
+
+    # Default User
+    DEFAULT_USER=admin
+    DEFAULT_PASSWORD=P@ssw0rd
+    ADMIN_EMAIL=admin@mail.xpto
+
+    # Default SMTP Server
+    SMTP_USER=
+    SMTP_PASS=
+    SMTP_URL=
+    SMTP_PORT=
    ```
 
 3. **Install Dependencies**
