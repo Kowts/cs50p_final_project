@@ -2,5 +2,6 @@ Markdown==3.5.1
 plyer==2.1.0
 PyQt6==6.6.0
 PyQt6_sip==13.6.0
+pytest==7.4.3
 python-dotenv==1.0.0
 qt_material==2.14
