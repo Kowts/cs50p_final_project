@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         user_id (int, optional): The ID of the user. Defaults to None.
     """
 
-    def __init__(self, task_manager: TaskManager, login_dialog: LoginDialog, user_id=None):
+    def __init__(self, task_manager: TaskManager, login_dialog: LoginDialog, user_id=None, tasks=None):
         super().__init__()
 
         self.user_id = user_id  # Initialize user_id
