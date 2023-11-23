@@ -80,7 +80,7 @@ pip install PyQt6
    First, clone the repository to your local machine:
 
    ```bash
-   git clone https://github.com/yourusername/task-manager-app.git
+   git clone https://github.com/Kowts/cs50p_final_project.git
    cd task-manager-app
    ```
 
