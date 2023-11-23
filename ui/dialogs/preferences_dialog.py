@@ -60,6 +60,10 @@ class PreferencesDialog(QDialog):
         layout.addWidget(QLabel("Font Size:"))
         layout.addWidget(self.font_size_selector)
 
+        # Create a menu action for toggling the high contrast theme
+        self.highContrastCheckbox = QCheckBox("High Contrast Theme")
+        layout.addWidget(self.highContrastCheckbox)
+
         # Add label for Calendar Color
         layout.addWidget(QLabel("Calendar Color:"))
 
@@ -105,10 +109,12 @@ class PreferencesDialog(QDialog):
         font_size = self.font_size_selector.currentText()
         always_on_top = self.always_on_top_checkbox.isChecked()
         calendar_color = self.calendar_color_input.text()
+        high_contrast = self.highContrastCheckbox.isChecked()
 
         # Save preferences
         self.task_manager.save_preferences({
             'theme': theme,
+            'high_contrast': str(high_contrast),
             'enable_notifications': str(enable_notifications),
             'font_size': font_size,
             'always_on_top': str(always_on_top),
@@ -117,8 +123,7 @@ class PreferencesDialog(QDialog):
 
         # Apply preferences immediately
         self.preferences_manager.apply_theme(theme, font_size)
-        self.preferences_manager.apply_notification_setting(
-            enable_notifications)
+        self.preferences_manager.apply_notification_setting(enable_notifications)
         self.preferences_manager.apply_font_size(font_size)
         self.preferences_manager.apply_always_on_top(always_on_top)
 
@@ -137,11 +142,18 @@ class PreferencesDialog(QDialog):
         enable_notifications_bool = enable_notifications.lower() == 'true'  # Convert to boolean
         self.notification_checkbox.setChecked(enable_notifications_bool)
 
+        # Convert the high_contrast string to a boolean
+        high_contrast = preferences.get('high_contrast', 'False')
+        high_contrast_bool = high_contrast.lower() == 'true'  # Convert to boolean
+        self.highContrastCheckbox.setChecked(high_contrast_bool)
+
+        # Get the saved font size (default to '12' if not set)
         font_size = preferences.get('font_size', '12')  # Default to '12'
         self.font_size_selector.setCurrentText(font_size)
 
         # Get the saved theme (default to "Light" if not set)
         saved_theme = preferences.get('theme', 'Light')
+
         # Find the index of the saved theme in the combo box and set it
         index = self.theme_selector.findText(saved_theme)
         if index >= 0:

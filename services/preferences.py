@@ -70,6 +70,20 @@ class PreferencesManager(QObject):
         # This could involve interacting with the notification system in your application
         pass
 
+    def apply_high_contrast_theme(self, apply):
+        """
+        Apply or remove a high contrast theme to the application.
+
+        Args:
+            apply (bool): True to apply the high contrast theme, False to remove it.
+        """
+        app = QApplication.instance()
+
+        if apply:
+            app.setStyleSheet("background-color: black; color: white;")
+        else:
+            app.setStyleSheet("")  # or apply the default theme
+
     def apply_font_size(self, font_size):
         """Adjusts the application's font size based on user preference.
 
@@ -147,10 +161,12 @@ class PreferencesManager(QObject):
             # Retrieve preferences from the task manager
             preferences = self.task_manager.get_preferences()
 
+            # Validate the font size preference
             font_size = self.validate_font_size(preferences.get('font_size', '10'))
 
             # Apply each preference
             self.apply_theme(preferences.get('theme', ''), font_size)
+            self.apply_high_contrast_theme(preferences.get('high_contrast', False))
             self.apply_font_size(font_size)
             self.apply_notification_setting(preferences.get('enable_notifications', True))
             self.apply_always_on_top(preferences.get('always_on_top', False))
