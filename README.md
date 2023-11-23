@@ -1,8 +1,20 @@
-# Task Manager
+<div align="center">
+  <a href="https://github.com/Kowts/cs50p_final_project">
+    <img src="resources/logo.png" alt="Logo" width="130" height="130">
+  </a>
+
+<h3 align="center">ProTaskVista</h3>
+
+  <p align="center">
+    CS50P Final Project
+    <br />
+    <a href="£">View Demo</a>
+  </p>
+</div>
 
 ## Introduction
 
-Task Manager is a PyQt-based desktop application designed to streamline personal task management. The application is designed to help users manage their tasks efficiently. It features a modern UI, a robust backend for handling tasks, and various utilities for an enhanced user experience.
+ProTaskVista is a PyQt-based desktop application designed to streamline personal task management. The application is designed to help users manage their tasks efficiently and it features a modern UI, a robust backend for handling tasks, and various utilities for an enhanced user experience.
 
 ## Features
 
@@ -127,7 +139,7 @@ To run the application, execute the `project.py` script from the command line:
 python project.py
 ```
 
-This will launch the Task Manager application. You can log in using the default credentials or create a new account.
+This will launch the ProTaskVista application. You can log in using the default credentials or create a new account.
 
 ### First Time Setup
 

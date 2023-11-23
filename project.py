@@ -14,7 +14,6 @@ setup_logging()
 DEFAULT_USER = get_env_variable('DEFAULT_USER')
 DEFAULT_PASSWORD = get_env_variable('DEFAULT_PASSWORD')
 
-
 def main():
     """
     The main function of the program.
