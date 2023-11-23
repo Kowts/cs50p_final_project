@@ -139,6 +139,19 @@ This will launch the Task Manager application. You can log in using the default 
 - Use the login dialog to access the application.
 - Once logged in, you can add, edit, and delete tasks, manage priorities and categories, and set your preferences.
 
+### Testing
+
+The project uses pytest for testing. To run the tests, follow these steps:
+
+1. Install pytest if you haven't already:
+```bash
+pip install pytest
+```
+2. Navigate root and run the tests:
+```bash
+pytest
+```
+
 ## Contributing
 
 (Provide guidelines on how others can contribute to your project.)
