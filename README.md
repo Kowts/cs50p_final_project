@@ -145,4 +145,4 @@ This will launch the Task Manager application. You can log in using the default 
 
 ## License
 
-(Include license information if applicable.)
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
