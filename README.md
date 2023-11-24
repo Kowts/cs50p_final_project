@@ -8,7 +8,7 @@
   <p align="center">
     CS50P Final Project
     <br />
-    <a href="£">View Demo</a>
+    <a href="#">View Demo</a>
   </p>
 </div>
 
@@ -164,10 +164,10 @@ pip install pytest
 pytest
 ```
 
-## Acknowledgments
+## Credits
 
-- Thank you CS50 Team for providing the content and the ways to learn this course.
-- Thank you professor [David C. Malan](https://github.com/dmalan) for all the lectures. Really amazing!
+- To the CS50 Team for the comprehensive content and effective learning methods offered in this course.
+- A special thanks to Professor [David C. Malan](https://github.com/dmalan) for his engaging and insightful lectures - truly exceptional!
 
 ## References
 
