@@ -58,8 +58,7 @@ class CalendarDialog(QDialog):
         """
         Loads tasks from the task manager and displays them in the calendar.
         """
-        self.calendar_color = self.task_manager.get_preferences().get(
-            'calendar_color', 'yellow')  # Load the calendar color preference
+        self.calendar_color = self.task_manager.get_preferences(self.user_id).get('calendar_color', 'yellow')  # Load the calendar color preference
         self.tasks = self.task_manager.list_tasks(self.user_id)
         self.display_tasks()
 
