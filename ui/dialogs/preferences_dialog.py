@@ -54,6 +54,10 @@ class PreferencesDialog(QDialog):
         self.always_on_top_checkbox = QCheckBox("Always on Top", self)
         layout.addWidget(self.always_on_top_checkbox)
 
+        # Create a checkbox for the "Email Notification" setting
+        self.email_notification_checkbox = QCheckBox("Email Notification", self)
+        layout.addWidget(self.email_notification_checkbox)
+
         # setting: Font Size
         self.font_size_selector = QComboBox()
         self.font_size_selector.addItems(FONT_SIZE)
@@ -108,6 +112,7 @@ class PreferencesDialog(QDialog):
         enable_notifications = self.notification_checkbox.isChecked()
         font_size = self.font_size_selector.currentText()
         always_on_top = self.always_on_top_checkbox.isChecked()
+        email_notification = self.email_notification_checkbox.isChecked()
         calendar_color = self.calendar_color_input.text()
         high_contrast = self.highContrastCheckbox.isChecked()
 
@@ -118,6 +123,7 @@ class PreferencesDialog(QDialog):
             'enable_notifications': str(enable_notifications),
             'font_size': font_size,
             'always_on_top': str(always_on_top),
+            'email_notification': str(email_notification),
             'calendar_color': calendar_color.upper()
         })
 
@@ -126,6 +132,7 @@ class PreferencesDialog(QDialog):
         self.preferences_manager.apply_notification_setting(enable_notifications)
         self.preferences_manager.apply_font_size(font_size)
         self.preferences_manager.apply_always_on_top(always_on_top)
+        self.preferences_manager.apply_email_notification(email_notification)
 
         # Send notification about successful save
         send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.", self.task_manager)
@@ -134,6 +141,14 @@ class PreferencesDialog(QDialog):
         self.accept()
 
     def load_preferences(self):
+        """
+        Load the current preferences and update the UI.
+
+        This method retrieves the preferences from the task manager and updates the UI elements accordingly.
+        It converts preference strings to boolean values, sets the selected options in combo boxes,
+        and updates the background color and text of input fields based on saved preferences.
+        """
+
         # Load current preferences and update the UI
         preferences = self.task_manager.get_preferences()
 
@@ -164,6 +179,10 @@ class PreferencesDialog(QDialog):
         always_on_top = preferences.get('always_on_top', 'False')
         always_on_top_bool = always_on_top.lower() == 'true'  # Convert to boolean
         self.always_on_top_checkbox.setChecked(always_on_top_bool)
+
+        email_notification = preferences.get('email_notification', 'False')
+        email_notification_bool = email_notification.lower() == 'true'  # Convert to boolean
+        self.email_notification_checkbox.setChecked(email_notification_bool)
 
         # Get the saved calendar color (default to a neutral color if not set)
         saved_calendar_color = preferences.get('calendar_color', '')  # Default to white

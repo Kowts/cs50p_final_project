@@ -70,6 +70,15 @@ class PreferencesManager(QObject):
         # This could involve interacting with the notification system in your application
         pass
 
+    def apply_email_notification(self, email_notification):
+        """
+        Apply the specified email notification preference.
+
+        Args:
+            email_notification (bool): The email notification preference to apply.
+        """
+        pass
+
     def apply_high_contrast_theme(self, apply):
         """
         Apply or remove a high contrast theme to the application.
@@ -169,6 +178,7 @@ class PreferencesManager(QObject):
             self.apply_high_contrast_theme(preferences.get('high_contrast', False))
             self.apply_font_size(font_size)
             self.apply_notification_setting(preferences.get('enable_notifications', True))
+            self.apply_email_notification(preferences.get('email_notification', True))
             self.apply_always_on_top(preferences.get('always_on_top', False))
         except Exception as e:
             print("Error loading and applying preferences:", e)
