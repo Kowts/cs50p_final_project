@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 from typing import Tuple, List
+from models.task_manager import TaskManager
 from helpers.utils import setup_logging, get_env_variable, send_windows_notification
 
 # Initialize logging at the start of the application for consistent and centralized logging.
@@ -15,9 +16,11 @@ setup_logging()
 class NotificationManager:
     """Manages notifications, ensuring they are sent based on predefined frequencies."""
 
-    def __init__(self):
+    def __init__(self, task_manager: TaskManager, user_id=None):
         # Store the last time a notification was sent as {notification_id: datetime}
         self.sent_notifications = {}
+        self.task_manager = task_manager
+        self.user_id = user_id
 
     def should_send_notification(self, notification_id, frequency="daily"):
         """Determines if a notification should be sent based on its frequency.
@@ -49,7 +52,7 @@ class NotificationManager:
                 return True
         return True
 
-    def send_notification(self, notification_id, title, message, task_manager, frequency="daily", timeout=10, app_name='YourApp'):
+    def send_notification(self, notification_id, title, message, frequency="daily", timeout=10, app_name='YourApp'):
         """Sends a notification based on user preferences and frequency.
 
         Args:
@@ -71,18 +74,15 @@ class NotificationManager:
 
         try:
             # Retrieve user preferences to check if notifications are enabled
-            preferences = task_manager.get_preferences()
-            enable_notifications = preferences.get(
-                'enable_notifications', 'True') == 'True'
+            preferences = self.task_manager.get_preferences(self.user_id)
+            enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
 
             if enable_notifications and self.should_send_notification(notification_id, frequency):
                 # Send the notification if enabled and frequency conditions are met
-                success = send_windows_notification(
-                    title, message, task_manager, timeout, app_name)
+                success = send_windows_notification(title, message, self.task_manager, self.user_id, timeout, app_name)
                 if success:
                     # Update the last sent time on successful notification
-                    self.sent_notifications[notification_id] = datetime.datetime.now(
-                    )
+                    self.sent_notifications[notification_id] = datetime.datetime.now()
                     logging.info(f"Notification sent: {title}")
                 else:
                     logging.warning(f"Failed to send notification: {title}")
@@ -145,6 +145,13 @@ class NotificationManager:
         - message_body: The body of the email.
         - attachment_paths: A list of file paths to attach to the email.
         """
+
+        # Check user preference for email notifications
+        preferences = self.task_manager.get_preferences()
+        email_notification_enabled = preferences.get('email_notification', 'True') == 'True'
+        if not email_notification_enabled:
+            logging.info("Email notification is disabled in user preferences.")
+            return
 
         # Connect to the SMTP server
         server, username = self.connect_smtp()

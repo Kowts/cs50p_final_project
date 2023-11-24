@@ -30,6 +30,7 @@ class PreferencesDialog(QDialog):
 
         self.task_manager = task_manager
         self.preferences_manager = preferences_manager
+        self.user_id = self.preferences_manager.user_id
 
         self.setWindowTitle("Preferences")
         self.setup_ui()
@@ -117,7 +118,7 @@ class PreferencesDialog(QDialog):
         high_contrast = self.highContrastCheckbox.isChecked()
 
         # Save preferences
-        self.task_manager.save_preferences({
+        self.task_manager.save_preferences(self.user_id, {
             'theme': theme,
             'high_contrast': str(high_contrast),
             'enable_notifications': str(enable_notifications),
@@ -135,7 +136,7 @@ class PreferencesDialog(QDialog):
         self.preferences_manager.apply_email_notification(email_notification)
 
         # Send notification about successful save
-        send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.", self.task_manager)
+        send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.", self.task_manager, self.user_id)
 
         # Optional: Close the preferences dialog after saving
         self.accept()
@@ -150,7 +151,7 @@ class PreferencesDialog(QDialog):
         """
 
         # Load current preferences and update the UI
-        preferences = self.task_manager.get_preferences()
+        preferences = self.task_manager.get_preferences(self.user_id)
 
         # Convert the preference string to a boolean
         enable_notifications = preferences.get('enable_notifications', 'False')  # Default to 'False' if not found

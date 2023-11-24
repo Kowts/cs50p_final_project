@@ -21,7 +21,7 @@ class PreferencesManager(QObject):
     theme_changed = pyqtSignal()
     calendar_color_changed = pyqtSignal(str)
 
-    def __init__(self, main_window, task_manager):
+    def __init__(self, main_window, task_manager, user_id=None):
         """Initializes the PreferencesManager with the main application window and task manager.
 
         Args:
@@ -29,6 +29,8 @@ class PreferencesManager(QObject):
             task_manager (TaskManager): A manager to handle tasks and preferences.
         """
         super().__init__()  # Initialize the parent QObject class
+
+        self.user_id = user_id  # Initialize user_id
 
         self.main_window = main_window
         self.task_manager = task_manager
@@ -168,7 +170,7 @@ class PreferencesManager(QObject):
         """
         try:
             # Retrieve preferences from the task manager
-            preferences = self.task_manager.get_preferences()
+            preferences = self.task_manager.get_preferences(self.user_id)
 
             # Validate the font size preference
             font_size = self.validate_font_size(preferences.get('font_size', '10'))

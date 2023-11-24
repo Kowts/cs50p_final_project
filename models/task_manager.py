@@ -700,7 +700,7 @@ class TaskManager:
             # Error handling with detailed message
             return f"Import failed: {str(e)}"
 
-    def get_preferences(self):
+    def get_preferences(self, user_id):
         """
         Retrieves user preferences from the database.
 
@@ -710,13 +710,13 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT key, value FROM preferences")
+                cursor.execute('SELECT key, value FROM preferences WHERE user_id = ?', (user_id,))
                 # Create a dictionary from the fetched preferences
                 return {key: value for key, value in cursor.fetchall()}
         except sqlite3.Error as e:
             return {}  # Returns an empty dictionary in case of an error
 
-    def save_preferences(self, preferences):
+    def save_preferences(self, user_id, preferences):
         """
         Save preferences to the database.
         :param preferences: A dictionary of preferences to be saved.
@@ -727,7 +727,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 for key, value in preferences.items():
-                    cursor.execute("REPLACE INTO preferences (key, value, created_at) VALUES (?, ?, ?)", (key, value, current_time))
+                    cursor.execute("REPLACE INTO preferences (user_id, key, value, created_at) VALUES (?,?, ?, ?)", (user_id, key, value, current_time))
         except sqlite3.Error as e:
             logging.error(f"Error saving preferences: {e}")
             return f"Failed to save preferences: {e}"
