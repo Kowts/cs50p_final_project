@@ -189,7 +189,8 @@ def show_dialog(title, message, icon=QMessageBox.Icon.Information):
     msg.setText(message)
     msg.exec()
 
-def send_windows_notification(title: str, message: str, task_manager, timeout: int = 10, app_name: str = 'YourApp') -> bool:
+
+def send_windows_notification(title: str, message: str, task_manager, user_id, timeout: int = 10, app_name: str = 'YourApp') -> bool:
     """
     Send a Windows notification if the user has enabled notifications.
 
@@ -204,7 +205,7 @@ def send_windows_notification(title: str, message: str, task_manager, timeout: i
         True if the notification was sent successfully, False otherwise.
     """
     try:
-        preferences = task_manager.get_preferences()
+        preferences = task_manager.get_preferences(user_id)
         enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
 
         if enable_notifications:
