@@ -1,9 +1,9 @@
 import re
 import logging
 import markdown
-from PyQt6.QtCore import Qt, pyqtSignal, QMarginsF, QDate
+from PyQt6.QtCore import Qt, pyqtSignal, QMarginsF
 from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
-from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QColor
+from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QColor, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -60,14 +60,18 @@ class MainWindow(QMainWindow):
 
         self.app = QApplication.instance()  # Reference to the QApplication instance
         self.task_manager = task_manager
-        self.notification_manager = NotificationManager()
+        self.notification_manager = NotificationManager(self.task_manager, user_id)
         self.task_tracker = TaskTracker(task_manager)
-        self.preferences_manager = PreferencesManager(self, self.task_manager)  # Initialize PreferencesManager
+        self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
 
         # Store the login dialog as an attribute
         self.login_dialog = login_dialog
 
-        self.setWindowTitle("To-Do List Manager")
+        # Load the icon
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
+
+        # Set the window title and size
+        self.setWindowTitle("ProTaskVista")
         self.setGeometry(100, 100, 800, 600)
         self.resize(800, 600)
 
@@ -186,8 +190,7 @@ class MainWindow(QMainWindow):
 
     def show_calendar_dialog(self):
         # Opens a calendar dialog for the user to interact with.
-        self.calendar_dialog = CalendarDialog(
-            self.task_manager, self.user_id, self.preferences_manager)
+        self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id, self.preferences_manager)
         self.calendar_dialog.exec()
 
     def show_date_picker(self):
@@ -400,8 +403,7 @@ class MainWindow(QMainWindow):
 
     def show_preferences_dialog(self):
         # Opens the Preferences Dialog where users can change application settings.
-        dialog = PreferencesDialog(
-            self.task_manager, self.preferences_manager, self)
+        dialog = PreferencesDialog(self.task_manager, self.preferences_manager, self)
         dialog.exec()
 
     def show_add_priority_dialog(self):
@@ -473,8 +475,7 @@ class MainWindow(QMainWindow):
 
             # Execute the query
             try:
-                tasks = self.task_manager.custom_query(
-                    search_query, parameters, use_regex=use_regex)
+                tasks = self.task_manager.custom_query(search_query, parameters, use_regex=use_regex)
                 self.update_table(tasks)
             except Exception as e:
                 # Handle any exceptions that occur during the query
@@ -532,8 +533,7 @@ class MainWindow(QMainWindow):
         )
 
         # Add the task to the database
-        error_message, task_id = self.task_manager.add_task(
-            self.user_id, *task)
+        error_message, task_id = self.task_manager.add_task(self.user_id, *task)
 
         if error_message:
             show_dialog("Task Addition Error", error_message, icon=QMessageBox.Icon.Critical)
@@ -543,14 +543,10 @@ class MainWindow(QMainWindow):
                 # Add the task to the table and map it to the task ID
                 row_position = self.task_table_widget.rowCount()
                 self.task_table_widget.insertRow(row_position)
-                self.task_table_widget.setItem(
-                    row_position, 0, QTableWidgetItem(task_name))
-                self.task_table_widget.setItem(
-                    row_position, 1, QTableWidgetItem(due_date))
-                self.task_table_widget.setItem(
-                    row_position, 2, QTableWidgetItem(priority))
-                self.task_table_widget.setItem(
-                    row_position, 3, QTableWidgetItem(category))
+                self.task_table_widget.setItem(row_position, 0, QTableWidgetItem(task_name))
+                self.task_table_widget.setItem(row_position, 1, QTableWidgetItem(due_date))
+                self.task_table_widget.setItem(row_position, 2, QTableWidgetItem(priority))
+                self.task_table_widget.setItem(row_position, 3, QTableWidgetItem(category))
 
                 # Update the task ID to row mapping
                 task_row_to_id[task_id] = row_position
@@ -558,8 +554,7 @@ class MainWindow(QMainWindow):
                 # Refresh the task list and clear the input fields
                 self.update_task_list()
                 self.clear_entries()
-                send_windows_notification(
-                    "Task Added", f"Task added successfully! ID: {task_id}", self.task_manager)
+                send_windows_notification("Task Added", f"Task added successfully! ID: {task_id}", self.task_manager, self.user_id)
             else:
                 show_dialog("Task ID Error", "Failed to retrieve the task ID.", icon=QMessageBox.Icon.Critical)
 
@@ -590,8 +585,7 @@ class MainWindow(QMainWindow):
         # Bulk remove tasks from database (implement this in TaskManager)
         try:
             self.task_manager.remove_tasks(selected_task_ids)
-            send_windows_notification(
-                "Success", "Tasks successfully removed.", self.task_manager)
+            send_windows_notification("Success", "Tasks successfully removed.", self.task_manager, self.user_id)
         except Exception as e:
             logging.error(f"An error occurred: {e}")
             return
@@ -621,8 +615,7 @@ class MainWindow(QMainWindow):
 
     def populate_edit_dialog(self, task_details):
         # Open a dialog to edit task details
-        edit_dialog = EditTaskDialog(
-            task_details, self.task_manager, self.user_id)
+        edit_dialog = EditTaskDialog(task_details, self.task_manager, self.user_id)
         if edit_dialog.exec() == QDialog.DialogCode.Accepted:
             # Update task details in the database
             updated_details = edit_dialog.get_updated_details()
@@ -719,8 +712,7 @@ class MainWindow(QMainWindow):
         # Assuming self.username stores the username of the logged-in user
         if hasattr(self, 'username'):
             # Log the logout event
-            logout_status = self.task_manager.log_user_activity(
-                self.username, "Logout")
+            logout_status = self.task_manager.log_user_activity(self.username, "Logout")
 
             if logout_status is not None:
                 # Handle any errors in logging the logout event, if necessary
@@ -754,10 +746,8 @@ class MainWindow(QMainWindow):
             self, "Export Tasks", "", "CSV Files (*.csv)")
         if file_name:
             try:
-                message = self.task_manager.export_tasks(
-                    file_name, self.user_id)
-                send_windows_notification(
-                    "Export Successful", message, self.task_manager)
+                message = self.task_manager.export_tasks(file_name, self.user_id)
+                send_windows_notification("Export Successful", message, self.task_manager, self.user_id)
 
             except Exception as e:
                 logging.error("An error occurred while exporting tasks: {e}")
@@ -942,14 +932,12 @@ class AddDataDialog(QDialog):
             if self.data_type == 'priority' and not self.task_manager.priority_exists(data):
                 color = self.color_input.text().strip()
                 self.task_manager.add_priority(data, color, self.user_id)
-                send_windows_notification(
-                    "Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
+                send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager, self.user_id)
                 self.data_added.emit()  # Emit the signal when data is added
                 self.accept()
             elif self.data_type == 'category' and not self.task_manager.category_exists(data):
                 self.task_manager.add_category(data, self.user_id)
-                send_windows_notification(
-                    "Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager)
+                send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager, self.user_id)
                 self.data_added.emit()  # Emit the signal when data is added
                 self.accept()
             else:

@@ -1,7 +1,7 @@
 import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout
-from PyQt6.QtGui import QCursor, QShortcut, QKeySequence
+from PyQt6.QtGui import QCursor, QShortcut, QKeySequence, QIcon
 from models.task_manager import TaskManager
 from ui.dialogs.registration_dialog import RegistrationDialog
 class LoginDialog(QDialog):
@@ -27,8 +27,12 @@ class LoginDialog(QDialog):
         if self.preferences_manager:
             self.preferences_manager.load_and_apply_preferences()
 
-        self.setWindowTitle("Login")
+        # Set up the login dialog
+        self.setWindowTitle("Login - ProTaskVista")
         self.setGeometry(600, 300, 400, 200)
+
+        # Load the icon
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
 
         # Set up the UI components here
         self.init_ui()
@@ -81,8 +85,7 @@ class LoginDialog(QDialog):
         button_layout.addStretch()
         self.login_button = QPushButton("Login")
         self.login_button.setFixedWidth(100)
-        self.login_button.setStyleSheet(
-            "background-color: #e1e1e1; padding: 5px;")
+        self.login_button.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
         self.login_button.clicked.connect(self.try_login)
         button_layout.addWidget(self.login_button)
         button_layout.addStretch()
@@ -126,16 +129,22 @@ class LoginDialog(QDialog):
 
         # Basic validation
         if not username or not password:
-            QMessageBox.warning(self, "Login Failed",
-                                "Please enter both username and password.")
+            QMessageBox.warning(self, "Login Failed", "Please enter both username and password.")
             return
 
-        valid_login, user_id = self.task_manager.verify_user(
-            username, password)
+        valid_login, user_id = self.task_manager.verify_user(username, password)
         if valid_login:
             self.accept()  # Successful login
             self.user_id = user_id  # Store the user_id in the LoginDialog
             self.task_manager.log_user_activity(username, "Login", "Success")
+
+            preferences = self.task_manager.get_preferences(self.user_id)
+            welcome_message = preferences.get('has_seen_welcome_message') == 'True'
+            self.show_welcome_message()
+            if not welcome_message:
+                self.show_welcome_message()
+                # Save preferences
+                self.task_manager.save_preferences(self.user_id, {'has_seen_welcome_message': str(True)})
         else:
             self.task_manager.log_user_activity(username, "Login", "Failure")
             self.failed_attempts += 1
@@ -146,6 +155,17 @@ class LoginDialog(QDialog):
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
                 QMessageBox.warning(
                     self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
+
+    def show_welcome_message(self):
+        """
+        Shows a welcome message to the user.
+
+        This method creates a QMessageBox and displays a welcome message to the user.
+        """
+        welcome_message = QMessageBox()
+        welcome_message.setWindowTitle("Welcome to ProTaskVista")
+        welcome_message.setText("Welcome to your Task Manager app! Get started by adding new tasks and enjoy organizing your tasks more efficiently!")
+        welcome_message.exec()
 
     def get_user_id(self):
         """
