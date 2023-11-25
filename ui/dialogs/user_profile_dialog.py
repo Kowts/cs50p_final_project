@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox
 )
 from models.task_manager import TaskManager
+from helpers.utils import send_windows_notification
 
 class UserProfileDialog(QDialog):
     def __init__(self, task_manager: TaskManager, user_id):
@@ -40,7 +41,7 @@ class UserProfileDialog(QDialog):
 
         # Add OK and Cancel buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(self.accept)
+        button_box.accepted.connect(self.save_profile)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
@@ -52,6 +53,7 @@ class UserProfileDialog(QDialog):
             self.email_input.setText(user_data['email'])
 
     def save_profile(self):
+
         # Save the updated profile data to the database
         updated_username = self.username_input.text()
         updated_email = self.email_input.text()
@@ -60,11 +62,9 @@ class UserProfileDialog(QDialog):
             QMessageBox.warning(self, "Invalid Data", "Please fill all fields.")
             return
 
-        success = self.task_manager.update_user_profile(
-            self.user_id, updated_username, updated_email)
+        success = self.task_manager.update_user_profile(self.user_id, updated_username, updated_email)
         if success:
-            QMessageBox.information(
-                self, "Success", "Profile updated successfully.")
+            send_windows_notification("Success", "Profile updated successfully.", self.task_manager, self.user_id)
             self.accept()
         else:
-            QMessageBox.warning(self, "Error", "Failed to update profile.")
+            send_windows_notification("Error", "Failed to update profile.", self.task_manager, self.user_id)

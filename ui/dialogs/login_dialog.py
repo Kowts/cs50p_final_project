@@ -138,13 +138,12 @@ class LoginDialog(QDialog):
             self.user_id = user_id  # Store the user_id in the LoginDialog
             self.task_manager.log_user_activity(username, "Login", "Success")
 
+            # Check if the user has seen the welcome message
             preferences = self.task_manager.get_preferences(self.user_id)
             welcome_message = preferences.get('has_seen_welcome_message') == 'True'
-            self.show_welcome_message()
             if not welcome_message:
                 self.show_welcome_message()
-                # Save preferences
-                self.task_manager.save_preferences(self.user_id, {'has_seen_welcome_message': str(True)})
+                self.task_manager.save_preferences(self.user_id, {'has_seen_welcome_message': str(True)})  # Save preferences
         else:
             self.task_manager.log_user_activity(username, "Login", "Failure")
             self.failed_attempts += 1
@@ -153,8 +152,7 @@ class LoginDialog(QDialog):
                 sys.exit()  # Exit the application after too many failed attempts
             else:
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
-                QMessageBox.warning(
-                    self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
+                QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
 
     def show_welcome_message(self):
         """

@@ -384,12 +384,13 @@ class MainWindow(QMainWindow):
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(version)
 
-        copyright = QLabel("Copyright © 2023 CS50P")
+        # Description
+        copyright = QLabel("Copyright © 2023")
         copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(copyright)
 
         # Developer
-        developer = QLabel("Developer - Joselito Coutinho")
+        developer = QLabel("Joselito Coutinho")
         developer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(developer)
 
