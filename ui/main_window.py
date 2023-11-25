@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
 
     def show_calendar_dialog(self):
         # Opens a calendar dialog for the user to interact with.
-        self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id, self.preferences_manager)
+        self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id)
         self.calendar_dialog.exec()
 
     def show_date_picker(self):
@@ -206,22 +206,17 @@ class MainWindow(QMainWindow):
         row_style = "QTableWidget::item { border-bottom: 1px solid grey; }"
         self.task_table_widget.horizontalHeader().setStyleSheet(header_style)
         self.task_table_widget.setStyleSheet(row_style)
-        self.task_table_widget.horizontalHeader(
-        ).setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.task_table_widget.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
 
     def setup_table_widget(self):
         # Set up the task table widget
         self.task_table_widget.setColumnCount(4)
-        self.task_table_widget.setHorizontalHeaderLabels(
-            ["Task Name", "Due Date", "Priority", "Category"])
+        self.task_table_widget.setHorizontalHeaderLabels(["Task Name", "Due Date", "Priority", "Category"])
         self.task_table_widget.horizontalHeader().setStretchLastSection(True)
-        self.task_table_widget.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch)
+        self.task_table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.task_table_widget.verticalHeader().setVisible(False)
-        self.task_table_widget.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows)
-        self.task_table_widget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.task_table_widget.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # Apply the table style
         self.apply_table_style()
@@ -316,8 +311,7 @@ class MainWindow(QMainWindow):
         # Create a widget to hold the table widget and add it to the main layout
         table_widget_container = QWidget()
         table_widget_container.setLayout(QVBoxLayout())
-        table_widget_container.layout().addWidget(
-            self.task_table_widget)  # Changed here
+        table_widget_container.layout().addWidget(self.task_table_widget)  # Changed here
         self.centralWidget().layout().addWidget(table_widget_container)  # Changed here
 
     def show_user_guide(self):
@@ -421,7 +415,7 @@ class MainWindow(QMainWindow):
 
     def show_find_dialog(self):
         # Displays the Find Dialog, allowing users to search for tasks.
-        self.find_dialog = FindDialog(self.task_text_edit, self.task_manager)
+        self.find_dialog = FindDialog(self.task_text_edit, self.task_manager, self.user_id)
         self.find_dialog.search_initiated.connect(self.search_database)
         self.find_dialog.show()
 
@@ -500,6 +494,9 @@ class MainWindow(QMainWindow):
         self.apply_table_style()
 
     def clear_entries(self):
+        """
+        Clears the input fields and resets the comboboxes to their default values.
+        """
         self.task_name_input.clear()
         self.due_date_input.clear()
         self.priority_combobox.setCurrentIndex(0)
@@ -570,8 +567,7 @@ class MainWindow(QMainWindow):
             return
 
         # Confirm before removing tasks
-        reply = QMessageBox.question(self, "Confirm Removal", "Are you sure you want to remove the selected tasks?",
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        reply = QMessageBox.question(self, "Confirm Removal", "Are you sure you want to remove the selected tasks?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.No:
             return
 
@@ -668,14 +664,10 @@ class MainWindow(QMainWindow):
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
                 # Set item flags to make cells read-only
-                name_item.setFlags(name_item.flags() & ~
-                                   Qt.ItemFlag.ItemIsEditable)
-                due_date_item.setFlags(
-                    due_date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                priority_item.setFlags(
-                    priority_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                category_item.setFlags(
-                    category_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                due_date_item.setFlags(due_date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                priority_item.setFlags(priority_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                category_item.setFlags(category_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
                 # Apply color to the priority cell
                 if color and QColor(color).isValid():
@@ -695,8 +687,7 @@ class MainWindow(QMainWindow):
             self.apply_table_style()
 
             # Set the size policy again to make sure it's effective
-            self.task_table_widget.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         except Exception as e:
             logging.error("An error occurred while updating task list: %s", e)

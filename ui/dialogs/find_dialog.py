@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QDialog
 )
-
+from services.preferences import PreferencesManager
 from models.task_manager import TaskManager
 
 class FindDialog(QDialog):
@@ -26,7 +26,7 @@ class FindDialog(QDialog):
     # Signal with the search parameters
     search_initiated = pyqtSignal(str, bool, bool, bool)
 
-    def __init__(self, text_widget, task_manager: TaskManager):
+    def __init__(self, text_widget, task_manager: TaskManager, user_id=None):
         """
         Initializes the FindDialog with a text widget and a task manager.
 
@@ -37,12 +37,16 @@ class FindDialog(QDialog):
         super().__init__()
         self.text_widget = text_widget
         self.task_manager = task_manager
+        self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
+
         self.setWindowTitle("Find")
         self.init_ui()
 
         # Shortcut for 'Find next' (e.g., Enter key)
         self.find_next_shortcut = QShortcut(QKeySequence("Return"), self)
         self.find_next_shortcut.activated.connect(self.find_next)
+
+        self.preferences_manager.load_and_apply_preferences()
 
     def init_ui(self):
         """

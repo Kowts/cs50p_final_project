@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox
 )
 from models.task_manager import TaskManager
+from services.preferences import PreferencesManager
 from helpers.utils import send_windows_notification
 
 class UserProfileDialog(QDialog):
@@ -14,12 +15,15 @@ class UserProfileDialog(QDialog):
         super().__init__()
         self.task_manager = task_manager
         self.user_id = user_id
+        self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
 
         self.setWindowTitle("Edit Profile")
         self.setGeometry(300, 300, 300, 200)
 
         self.init_ui()
         self.load_user_data()
+
+        self.preferences_manager.load_and_apply_preferences()
 
     def init_ui(self):
         layout = QVBoxLayout(self)

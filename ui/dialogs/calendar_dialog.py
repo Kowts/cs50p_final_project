@@ -21,7 +21,7 @@ class CalendarDialog(QDialog):
         tasks (list): A list of tasks associated with the user.
     """
 
-    def __init__(self, task_manager: TaskManager, user_id, preferences_manager: PreferencesManager):
+    def __init__(self, task_manager: TaskManager, user_id=None):
         """
         Initializes the CalendarDialog with a task manager and a user ID.
 
@@ -35,12 +35,13 @@ class CalendarDialog(QDialog):
 
         self.task_manager = task_manager
         self.user_id = user_id
+        self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
 
         self.init_ui()
         self.load_tasks()
 
-        preferences_manager.calendar_color_changed.connect(
-            self.update_calendar_color)
+        self.preferences_manager.calendar_color_changed.connect(self.update_calendar_color)
+        self.preferences_manager.load_and_apply_preferences()
 
     def init_ui(self):
         """
