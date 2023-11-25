@@ -7,19 +7,11 @@ import datetime
 import logging
 from enum import Enum
 from helpers.utils import setup_logging, get_env_variable, is_valid_email, is_valid_username, is_valid_password, is_valid_task_name, hash_password, format_datetime
+from helpers.constants import DATABASE_FILE, DEFAULT_PRIORITIES, DEFAULT_CATEGORIES, STATUS_ACTIVE, STATUS_INACTIVE
 
 # Initialize logging configuration at application startup
 setup_logging()
 
-# Constants for database file and default values, loaded from environment variables
-DATABASE_FILE = get_env_variable('DATABASE_FILE')
-DEFAULT_PRIORITIES = get_env_variable('DEFAULT_PRIORITIES').split(',')
-DEFAULT_CATEGORIES = get_env_variable('DEFAULT_CATEGORIES').split(',')
-
-class DefaultStatus(Enum):
-    """Enum for default status values."""
-    ACTIVE = 1
-    INACTIVE = 0
 class TaskManager:
     """
     Manages tasks, user authentication, and database interactions.
@@ -275,7 +267,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO priorities (user_id, name, color, created_at, status) VALUES (?, ?, ?, ?, ?)", (user_id, priority_name, color, current_time, 1))
+                cursor.execute("INSERT INTO priorities (user_id, name, color, created_at, status) VALUES (?, ?, ?, ?, ?)", (user_id, priority_name, color, current_time, STATUS_ACTIVE))
                 conn.commit()  # Make sure to commit the changes
             return f"Priority '{priority_name}' added successfully."
         except sqlite3.Error as e:
@@ -311,7 +303,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO categories (user_id, name, created_at, status) VALUES (?, ?, ?, ?)", (user_id, category_name, current_time, 1))
+                cursor.execute("INSERT INTO categories (user_id, name, created_at, status) VALUES (?, ?, ?, ?)", (user_id, category_name, current_time, STATUS_ACTIVE))
                 conn.commit()  # Make sure to commit the changes
             return f"Category '{category_name}' added successfully."
         except sqlite3.Error as e:
@@ -381,16 +373,12 @@ class TaskManager:
         Returns:
             None if successful, an error message otherwise.
         """
-        if not is_valid_username(username) or not is_valid_password(password):
-            raise ValueError("Invalid username or password")
-
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 hashed_password, salt = hash_password(password)
                 created_at = format_datetime(QDateTime.currentDateTime())
-                user_status = DefaultStatus.ACTIVE.value
-                cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)", (username, hashed_password, salt, created_at, user_status))
+                cursor.execute("INSERT INTO users (username, password, salt, created_at, status) VALUES (?, ?, ?, ?, ?)", (username, hashed_password, salt, created_at, STATUS_ACTIVE))
             return None
         except sqlite3.Error as e:
             return str(e)
@@ -423,6 +411,17 @@ class TaskManager:
 
         except sqlite3.Error:
             return False, None  # Return False if there's an error during the operation
+
+    def username_exists(self, username):
+        """Checks if a username already exists in the database."""
+        try:
+            with self.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+                return cursor.fetchone() is not None
+        except sqlite3.Error as e:
+            logging.error(f"Database error in username_exists: {e}")
+            return False  # In case of an error, safely return False
 
     def update_user_profile(self, user_id, username, email):
         """
@@ -494,7 +493,7 @@ class TaskManager:
                 created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                 cursor.execute(
                     "INSERT INTO tasks (user_id, name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, task_name, due_date, priority,category, created_at, DefaultStatus.ACTIVE.value)
+                    (user_id, task_name, due_date, priority,category, created_at, STATUS_ACTIVE)
                 )
                 task_id = cursor.lastrowid
             return None, task_id
@@ -564,7 +563,7 @@ class TaskManager:
                 LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
                 WHERE t.user_id = ? AND t.status = ?
                 '''
-                cursor.execute(query, (user_id, status or DefaultStatus.ACTIVE.value))
+                cursor.execute(query, (user_id, status or STATUS_ACTIVE))
                 return cursor.fetchall()  # Returns a list of tasks with priority color
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
@@ -588,7 +587,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 # Create a query string with the correct number of placeholders
                 placeholders = ', '.join(['?'] * len(task_ids))
-                query = f"UPDATE tasks SET status = {DefaultStatus.INACTIVE.value} WHERE id IN ({placeholders})"
+                query = f"UPDATE tasks SET status = {STATUS_INACTIVE} WHERE id IN ({placeholders})"
                 cursor.execute(query, task_ids)
                 conn.commit()
             return "Tasks successfully set as inactive."
@@ -620,12 +619,11 @@ class TaskManager:
             an empty list in case of an error.
         """
         today = datetime.date.today().strftime("%Y-%m-%d")
-        status = DefaultStatus.ACTIVE.value
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 query = "SELECT name FROM tasks WHERE due_date = ? AND status = ?"
-                cursor.execute(query, (today, status))
+                cursor.execute(query, (today, STATUS_ACTIVE))
                 tasks = [row[0] for row in cursor.fetchall()]
                 logging.info(f"Tasks due today: {tasks}")
                 return tasks
@@ -649,7 +647,7 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT * FROM tasks WHERE user_id = ? AND status = ?', (user_id, DefaultStatus.ACTIVE.value))
+                cursor.execute('SELECT * FROM tasks WHERE user_id = ? AND status = ?', (user_id, STATUS_ACTIVE))
                 tasks = cursor.fetchall()
 
             with open(file_path, mode='w', newline='', encoding='utf-8') as file:
@@ -691,7 +689,7 @@ class TaskManager:
                             created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
                             cursor.execute(
                                 "INSERT INTO tasks (user_id, name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                                (user_id, task_name, due_date, priority,category, created_at, DefaultStatus.ACTIVE.value)
+                                (user_id, task_name, due_date, priority,category, created_at, STATUS_ACTIVE)
                             )
                         else:
                             logging.error(f"Skipping incomplete row: {row}")
