@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout
 from PyQt6.QtGui import QCursor, QShortcut, QKeySequence, QIcon
 from models.task_manager import TaskManager
 from ui.dialogs.registration_dialog import RegistrationDialog
+
 class LoginDialog(QDialog):
     def __init__(self, task_manager: TaskManager, main_window, preferences_manager=None):
         """

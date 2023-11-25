@@ -2,20 +2,15 @@ import re
 import sqlite3
 import os
 import hashlib
+import logging
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtWidgets import QMessageBox
 from dotenv import load_dotenv
 from plyer import notification
-import logging
+from helpers.constants import REGEX_PATTERNS
 
 # Load environment variables from a .env file for configuration management.
 load_dotenv()
-
-# Centralized configuration for regular expressions
-REGEX_PATTERNS = {
-    'password': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()]).{8,}$',
-    'email': r"[^@]+@[^@]+\.[^@]+"
-}
 
 def setup_logging(level=logging.DEBUG, filename='app.log', handler=logging.FileHandler):
     """
