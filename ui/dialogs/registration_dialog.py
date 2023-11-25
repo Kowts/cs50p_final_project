@@ -1,5 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QMessageBox
 from models.task_manager import TaskManager
+from helpers.utils import setup_logging, get_env_variable, is_valid_email, is_valid_username, is_valid_password, is_valid_task_name, hash_password, format_datetime
+from helpers.constants import LOGGING_FORMAT, LOGGING_DATE_FORMAT, LOGGING_LEVEL, LOGGING_FILE_PATH
 
 class RegistrationDialog(QDialog):
     """
@@ -93,13 +95,29 @@ class RegistrationDialog(QDialog):
         password = self.password_input.text()
         password_repeat = self.password_repeat_input.text()
 
+        # Check if any input fields are empty
         if not username or not password or not password_repeat:
-            QMessageBox.warning(self, "Incomplete",
-                                "Please fill out all fields.")
+            QMessageBox.warning(self, "Incomplete", "Please fill out all fields.")
             return
 
+        # Check if the passwords match
         if password != password_repeat:
             QMessageBox.warning(self, "Mismatch", "Passwords do not match.")
+            return
+
+        # Check if the username is valid
+        if not self.task_manager.is_valid_username(username):
+            QMessageBox.warning(self, "Invalid Username", "Username is invalid. Please choose a different username.")
+            return
+
+        # Check if the password is valid
+        if not self.task_manager.is_valid_password(password):
+            QMessageBox.warning(self, "Invalid Password", "Password does not meet the required criteria.")
+            return
+
+        # Check if the username already exists
+        if self.task_manager.username_exists(username):
+            QMessageBox.warning(self, "Username Taken", "This username is already taken. Please choose another.")
             return
 
         # Assuming task_manager has a method to create user
