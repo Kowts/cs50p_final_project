@@ -3,16 +3,10 @@ from PyQt6.QtWidgets import QApplication
 from qt_material import apply_stylesheet
 import logging
 from helpers.utils import setup_logging
+from helpers.constants import THEME_MAP, DEFAULT_STYLESHEET
 
 # Setup logging as soon as possible, ideally at the start of the application
 setup_logging()
-
-DEFAULT_STYLESHEET = ""  # or define your default styles here
-THEME_MAP = {
-    'Dark': 'dark_blue.xml',
-    'Light': 'light_blue.xml',
-    'Default': DEFAULT_STYLESHEET
-}
 
 class PreferencesManager(QObject):
     """Manages user preferences for the application's UI and functionalities."""

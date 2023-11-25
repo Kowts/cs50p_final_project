@@ -3,9 +3,7 @@ from PyQt6.QtGui import QColor
 from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
 from helpers.utils import get_env_variable, send_windows_notification
-
-THEME = get_env_variable('THEME').split(',')
-FONT_SIZE = get_env_variable('FONT_SIZE').split(',')
+from helpers.constants import THEME, FONT_SIZE
 
 class PreferencesDialog(QDialog):
     """
