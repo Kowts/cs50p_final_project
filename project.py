@@ -101,8 +101,16 @@ def main():
 
         # Show the login dialog and proceed if login is successful
         if login_dialog.exec() == QDialog.DialogCode.Accepted:
+
+            # Fetch user-entered credentials
+            entered_username = login_dialog.username_input.text()
+            entered_password = login_dialog.password_input.text()
+
+            # Validate the user-entered credentials
             user_id = login_dialog.get_user_id()
-            valid_login, fetched_user_id = login_user(DEFAULT_USER, DEFAULT_PASSWORD)
+            valid_login, fetched_user_id = login_user(entered_username, entered_password)
+
+            # Proceed if the login is valid and the user ID matches
             if valid_login and fetched_user_id == user_id:
                 # Fetch the tasks for the logged-in user and initialize the main window with these tasks
                 tasks = fetch_tasks(user_id)
