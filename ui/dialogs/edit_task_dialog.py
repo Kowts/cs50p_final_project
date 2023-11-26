@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
 )
 from models.task_manager import TaskManager
-
+from services.preferences import PreferencesManager
 
 class EditTaskDialog(QDialog):
     """
@@ -26,6 +26,7 @@ class EditTaskDialog(QDialog):
         super().__init__()
         self.task_details = task_details
         self.task_manager = task_manager
+        self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
         self.user_id = user_id  # Add user_id attribute
 
         self.setWindowTitle("Edit Task")
@@ -54,8 +55,7 @@ class EditTaskDialog(QDialog):
         layout.addWidget(self.category_combobox)
 
         # Add OK and Cancel buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -65,6 +65,8 @@ class EditTaskDialog(QDialog):
 
         # Populate fields with current task details
         self.populate_fields()
+
+        self.preferences_manager.load_and_apply_preferences()
 
     def populate_fields(self):
         # Populate the fields with the current task details

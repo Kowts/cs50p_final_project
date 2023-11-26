@@ -35,11 +35,11 @@ class UserProfileDialog(QDialog):
         self.username_input.setPlaceholderText("Username")
         layout.addWidget(self.username_input)
 
-        # Password label and input
-        email_label = QLabel("Password")
+        # Email label and input
+        email_label = QLabel("Email")
         layout.addWidget(email_label)
         self.email_input = QLineEdit()
-        self.email_input.setPlaceholderText("Password")
+        self.email_input.setPlaceholderText("Email")
         layout.addWidget(self.email_input)
         layout.addStretch()
 

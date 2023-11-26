@@ -346,14 +346,16 @@ class TaskManager:
                 cursor = conn.cursor()
 
                 # Assuming the users table has columns like 'id', 'username', 'email', etc.
-                query = "SELECT username, email FROM users WHERE id = ?"
+                query = "SELECT username, email, password, salt FROM users WHERE id = ?"
                 cursor.execute(query, (user_id,))
 
                 user_data = cursor.fetchone()
                 if user_data:
                     return {
                         "username": user_data[0],
-                        "email": user_data[1]
+                        "email": user_data[1],
+                        "password": user_data[2],
+                        "salt": user_data[3]
                     }
                 else:
                     return None
@@ -447,6 +449,31 @@ class TaskManager:
                 return True
         except Exception as e:
             logging.error(f"An error occurred while updating user profile: {e}")
+            return False
+
+    def update_user_password(self, user_id, new_password):
+        """
+        Updates the password for a specific user.
+
+        Args:
+            user_id (int): The ID of the user whose password is to be updated.
+            new_password (str): The new password for the user.
+
+        Returns:
+            bool: True if the update is successful, False otherwise.
+        """
+        try:
+            # Hash the new password
+            hashed_password, salt = hash_password(new_password)
+
+            # Update the user's password in the database
+            with self.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE users SET password = ?, salt = ? WHERE id = ?", (hashed_password, salt, user_id))
+                conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Error updating user password: {e}")
             return False
 
     def log_user_activity(self, username, event_type, status=None):
