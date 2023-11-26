@@ -1,23 +1,20 @@
 from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QMessageBox
+from PyQt6.QtGui import QIcon
 from models.task_manager import TaskManager
 
 class RegistrationDialog(QDialog):
     """
     A dialog window for user registration.
 
-    Args:
-        task_manager (TaskManager): An instance of the task manager.
+    This dialog provides a user-friendly interface for creating a new account with
+    input validation and informative messages.
 
     Attributes:
         task_manager (TaskManager): An instance of the task manager.
-        username_input (QLineEdit): The input field for the username.
-        password_input (QLineEdit): The input field for the password.
-        password_repeat_input (QLineEdit): The input field for repeating the password.
-        register_button (QPushButton): The button for registering the user.
-
-    Methods:
-        __init__(self, task_manager): Initializes the RegistrationDialog.
-        register(self): Validates the inputs and creates a new user.
+        username_input (QLineEdit): Input field for the username.
+        password_input (QLineEdit): Input field for the password.
+        password_repeat_input (QLineEdit): Input field for confirming the password.
+        register_button (QPushButton): Button to trigger the registration process.
     """
 
     def __init__(self, task_manager: TaskManager):
@@ -25,66 +22,65 @@ class RegistrationDialog(QDialog):
 
         self.task_manager = task_manager
 
-        self.setWindowTitle("Create Account")
+        # Set up the login dialog
+        self.setWindowTitle("Create Account  - ProTaskVista")
         self.setGeometry(600, 300, 400, 200)
 
-        layout = QVBoxLayout()
+        # Load the icon
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
 
-        # Username label and input
+        self.init_ui()
+
+    def init_ui(self):
+        """
+        Initializes the user interface components of the registration dialog.
+
+        This method sets up a clean and structured layout with labeled input fields
+        and a registration button.
+        """
+
+        layout = QVBoxLayout()
+        layout.setSpacing(10)  # Set spacing between elements
+        layout.setContentsMargins(20, 20, 20, 20)  # Set margins for the layout
+
+        # Stylish and clear username input section
         username_label = QLabel("Username")
-        layout.addWidget(username_label)
         self.username_input = QLineEdit()
-        self.username_input.setPlaceholderText("Username")
+        self.username_input.setPlaceholderText("Enter your username")
         self.username_input.setMinimumHeight(32)
+        layout.addWidget(username_label)
         layout.addWidget(self.username_input)
 
-        # Add vertical spacing and Adjust the number to increase or decrease the space
+        # Password input fields with proper spacing and clear labeling
         layout.addSpacing(12)
-
-        # Password label
-        password_label = QLabel("Password/Repeat")
-        layout.addWidget(password_label)
+        password_label = QLabel("Password / Repeat Password")
         self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("Password")
-        self.password_input.setMinimumHeight(32)
+        self.password_input.setPlaceholderText("Enter your password")
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        layout.addWidget(self.password_input)
-
-        # Repeat password field
+        self.password_input.setMinimumHeight(32)
         self.password_repeat_input = QLineEdit()
-        self.password_repeat_input.setPlaceholderText("Repeat Password")
-        self.password_repeat_input.setMinimumHeight(32)
+        self.password_repeat_input.setPlaceholderText("Repeat your password")
         self.password_repeat_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_repeat_input.setMinimumHeight(32)
+        layout.addWidget(password_label)
+        layout.addWidget(self.password_input)
         layout.addWidget(self.password_repeat_input)
 
-        # Create a horizontal layout for the button to center it
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()  # Spacer that will push the button towards the center
-
-        # Login button
+        # Register button with enhanced visual appeal
         self.register_button = QPushButton("Register")
-        self.register_button.setFixedWidth(100)
+        self.register_button.setMinimumHeight(35)  # Set minimum height
         self.register_button.clicked.connect(self.register)
-        button_layout.addWidget(self.register_button)
-        button_layout.addStretch()  # Add the horizontal layout to the main vertical layout
-        self.register_button.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
-        layout.addLayout(button_layout)
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(self.register_button)
-        button_layout.addStretch()
+        layout.addWidget(self.register_button)
 
         self.setLayout(layout)
 
     def register(self):
         """
-        Validates the inputs and creates a new user.
+        Handles the registration process by validating input fields and creating a new user account.
 
-        If any of the input fields are empty or the passwords do not match,
-        a warning message is displayed. Otherwise, the user creation logic
-        is implemented in the task_manager. If an error occurs during user
-        creation, an error message is displayed. Otherwise, a success message
-        is displayed and the dialog is accepted.
+        Validates the provided username and passwords, checking for their completeness,
+        correctness, and uniqueness. Displays appropriate messages for any validation failures
+        or registration success.
         """
 
         # Validate the inputs
@@ -117,12 +113,10 @@ class RegistrationDialog(QDialog):
             QMessageBox.warning(self, "Username Taken", "This username is already taken. Please choose another.")
             return
 
-        # Assuming task_manager has a method to create user
-        # Implement the user creation logic in task_manager
+        # User creation logic with error handling
         error_message = self.task_manager.create_user(username, password)
         if error_message:
-            QMessageBox.critical(self, "Error", error_message)
+            QMessageBox.critical(self, "Registration Failed", error_message)
         else:
-            QMessageBox.information(
-                self, "Success", "Account created successfully.")
+            QMessageBox.information(self, "Success", "Account created successfully.")
             self.accept()

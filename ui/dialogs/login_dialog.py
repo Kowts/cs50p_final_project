@@ -1,7 +1,7 @@
 import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout
-from PyQt6.QtGui import QCursor, QShortcut, QKeySequence, QIcon
+from PyQt6.QtGui import QShortcut, QKeySequence, QIcon
 from models.task_manager import TaskManager
 from ui.dialogs.registration_dialog import RegistrationDialog
 
@@ -42,74 +42,56 @@ class LoginDialog(QDialog):
         """
         Initializes the user interface for the login dialog.
 
-        This method sets up the layout and widgets for the login dialog, including the login header label,
-        username and password input fields, login button, and create account label. It also applies user
-        preferences for 'Always on Top' if set.
-
-        Parameters:
-        - self: The instance of the class.
-
-        Returns:
-        - None
+        This method sets up a visually appealing layout with input fields, buttons, and labels.
+        It also applies user preferences for 'Always on Top' if set.
         """
 
-        # Main layout for the login dialog
+        # Main layout with improved spacing and alignment
         login_layout = QVBoxLayout()
+        login_layout.setSpacing(10)  # Set spacing between elements
+        login_layout.setContentsMargins(20, 20, 20, 20)  # Set margins for the layout
 
-        # Create the LOGIN header label
+        # LOGIN header label with enhanced styling
         login_title_label = QLabel("LOGIN")
-        login_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        login_title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #1d1f21;")
+        login_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center-align the label
+        login_title_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #4a4a4a;")
         login_layout.addWidget(login_title_label)
 
-        # Username input section
-        username_label = QLabel("Username")
-        login_layout.addWidget(username_label)
+        # Username input section with user-friendly placeholder
+        username_label = QLabel("Username:")
         self.username_input = QLineEdit()
-        self.username_input.setPlaceholderText("Username")
-        self.username_input.setMinimumHeight(32)
+        self.username_input.setPlaceholderText("Enter your username")  # Placeholder text
+        self.username_input.setMinimumHeight(35)  # Set minimum height for better readability
+        login_layout.addWidget(username_label)
         login_layout.addWidget(self.username_input)
 
-        # Password input section
-        # Spacing between username and password inputs
-        login_layout.addSpacing(12)
-        password_label = QLabel("Password")
-        login_layout.addWidget(password_label)
+        # Password input section with show/hide toggle (not implemented here)
+        password_label = QLabel("Password:")
         self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("Password")
-        self.password_input.setMinimumHeight(32)
-        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_input.setPlaceholderText("Enter your password")  # Placeholder text
+        self.password_input.setMinimumHeight(35)  # Set minimum height
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)  # Hide password characters
+        login_layout.addWidget(password_label)
         login_layout.addWidget(self.password_input)
 
-        # Login button section
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
+        # Login button with improved styling and interaction
         self.login_button = QPushButton("Login")
-        self.login_button.setFixedWidth(100)
-        self.login_button.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
-        self.login_button.clicked.connect(self.try_login)
-        button_layout.addWidget(self.login_button)
-        button_layout.addStretch()
-        login_layout.addLayout(button_layout)
+        self.login_button.setMinimumHeight(35)  # Set minimum height
+        self.login_button.clicked.connect(self.try_login)  # Connect button to login function
+        login_layout.addWidget(self.login_button)
 
-        # Create account label
-        account_layout = QHBoxLayout()
-        account_layout.addStretch()
+        # Link to create a new account with interactive styling
         create_account_label = QLabel("<a href='#'>Create an Account</a>")
-        create_account_label.setStyleSheet("color: blue; text-decoration: underline;")
-        create_account_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        create_account_label.setOpenExternalLinks(False)
-        create_account_label.linkActivated.connect(self.create_account)
-        account_layout.addWidget(create_account_label)
-        account_layout.addStretch()
-        login_layout.addLayout(account_layout)
+        create_account_label.setStyleSheet("color: #007bff; text-decoration: underline;")
+        create_account_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center-align the label
+        create_account_label.linkActivated.connect(self.create_account)  # Connect to account creation dialog
+        login_layout.addWidget(create_account_label)
 
-        # Set the layout to the dialog
+        # Set the layout to the dialog and improve keyboard navigation
         self.setLayout(login_layout)
-
-        # Shortcut for login
+        self.username_input.setFocus()  # Focus on username input when dialog opens
         login_shortcut = QShortcut(QKeySequence("Return"), self)
-        login_shortcut.activated.connect(self.try_login)
+        login_shortcut.activated.connect(self.try_login)  # Allow pressing Enter to login
 
         # Apply user preferences for 'Always on Top' if set
         if self.preferences_manager:
