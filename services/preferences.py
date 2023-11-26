@@ -75,17 +75,22 @@ class PreferencesManager(QObject):
         """
         pass
 
-    def apply_high_contrast_theme(self, apply):
+    def apply_high_contrast_theme(self, high_contrast):
         """
         Apply or remove a high contrast theme to the application.
 
         Args:
-            apply (bool): True to apply the high contrast theme, False to remove it.
+            high_contrast (bool): True to apply the high contrast theme, False to remove it.
         """
         app = QApplication.instance()
 
-        if apply:
-            app.setStyleSheet("background-color: black; color: white;")
+        # Convert high_contrast to boolean if it's a string
+        high_contrast_bool = high_contrast.lower() == 'true' if isinstance(high_contrast, str) else high_contrast
+
+        if high_contrast_bool:
+            app = QApplication.instance()
+            with open("resources/stylesheet.qss", "r") as file:
+                app.setStyleSheet(file.read())
         else:
             app.setStyleSheet("")  # or apply the default theme
 

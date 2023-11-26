@@ -1,0 +1,119 @@
+/* High Contrast Theme Stylesheet for PyQt Application */
+
+/* General widget styles */
+QWidget {
+    background-color: black;
+    color: white;
+    font-size: 14px; /* Adjust the font size as needed */
+}
+
+/* Button styles */
+QPushButton {
+    background-color: #333333; /* Dark grey for buttons */
+    color: white;
+    border: 2px solid white;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #555555; /* Slightly lighter grey on hover */
+}
+
+QPushButton:pressed {
+    background-color: #222222; /* Darker grey when pressed */
+}
+
+/* Input field styles */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: white;
+    color: black;
+    border: 1px solid white;
+    padding: 2px;
+}
+
+/* Label, Checkbox, and RadioButton styles */
+QLabel, QCheckBox, QRadioButton {
+    color: white;
+}
+
+/* Menu and MenuBar styles */
+QMenuBar, QMenu {
+    background-color: #333333;
+    color: white;
+}
+
+QMenuBar::item:selected, QMenu::item:selected {
+    background-color: #555555;
+}
+
+/* ToolBar styles */
+QToolBar {
+    border: none;
+    background-color: #333333;
+}
+
+/* StatusBar styles */
+QStatusBar {
+    color: white;
+    background-color: #333333;
+}
+
+/* TabBar styles */
+QTabBar::tab {
+    background-color: #555555;
+    color: white;
+    padding: 5px;
+    border: 1px solid white;
+    margin-left: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #777777;
+}
+
+/* Slider styles */
+QSlider::groove:horizontal, QSlider::groove:vertical {
+    background-color: white;
+    height: 8px; /* Horizontal slider */
+    width: 8px;  /* Vertical slider */
+}
+
+QSlider::handle:horizontal, QSlider::handle:vertical {
+    background-color: #333333;
+    border: 1px solid white;
+    height: 20px;
+    width: 20px;
+}
+
+/* ScrollBar styles */
+QScrollBar:vertical {
+    border: 2px solid black;
+    background: white;
+    width: 15px;
+    margin: 22px 0 22px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #333333;
+    min-height: 20px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: 2px solid black;
+    background: #555555;
+    height: 20px;
+    subcontrol-position: top; /* Position at the top for 'sub-line' */
+    subcontrol-origin: margin;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    border: 2px solid black;
+    width: 3px;
+    height: 3px;
+    background: white;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
