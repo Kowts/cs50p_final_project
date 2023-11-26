@@ -43,6 +43,7 @@ class PreferencesManager(QObject):
 
         # Get the theme file or default to empty string
         theme_file = THEME_MAP.get(theme_name, '')
+
         if theme_file.endswith('.xml'):
             apply_stylesheet(app, theme=theme_file, extra=extra)
         elif theme_name == 'Default':
@@ -165,7 +166,15 @@ class PreferencesManager(QObject):
 
     def load_and_apply_preferences(self):
         """
-        Loads user preferences from the task manager and applies them.
+        Loads and applies user preferences.
+
+        Retrieves preferences from the task manager and applies them to the application.
+        This method validates the font size preference, applies the theme, font size,
+        high contrast theme, notification settings, email notification, and always on top
+        preference based on the retrieved preferences.
+
+        Raises:
+            Exception: If there is an error loading and applying preferences.
         """
         try:
             # Retrieve preferences from the task manager
@@ -174,12 +183,20 @@ class PreferencesManager(QObject):
             # Validate the font size preference
             font_size = self.validate_font_size(preferences.get('font_size', '10'))
 
-            # Apply each preference
+            # Apply theme first
             self.apply_theme(preferences.get('theme', ''), font_size)
-            self.apply_high_contrast_theme(preferences.get('high_contrast', False))
             self.apply_font_size(font_size)
+
+            # Check for high contrast preference and apply if enabled
+            high_contrast = preferences.get('high_contrast', False)
+            high_contrast_bool = high_contrast.lower() == 'true' if isinstance(high_contrast, str) else high_contrast
+            if high_contrast_bool:
+                self.apply_high_contrast_theme(True)
+
+            # Apply other preferences
             self.apply_notification_setting(preferences.get('enable_notifications', True))
             self.apply_email_notification(preferences.get('email_notification', True))
             self.apply_always_on_top(preferences.get('always_on_top', False))
+
         except Exception as e:
             print("Error loading and applying preferences:", e)
