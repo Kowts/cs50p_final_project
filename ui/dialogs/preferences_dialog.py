@@ -127,11 +127,7 @@ class PreferencesDialog(QDialog):
         })
 
         # Apply preferences immediately
-        self.preferences_manager.apply_theme(theme, font_size)
-        self.preferences_manager.apply_notification_setting(enable_notifications)
-        self.preferences_manager.apply_font_size(font_size)
-        self.preferences_manager.apply_always_on_top(always_on_top)
-        self.preferences_manager.apply_email_notification(email_notification)
+        self.preferences_manager.load_and_apply_preferences()
 
         # Send notification about successful save
         send_windows_notification("Preferences Updated", "Your preferences have been successfully updated.", self.task_manager, self.user_id)
