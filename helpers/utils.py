@@ -7,10 +7,14 @@ from PyQt6.QtCore import QDateTime
 from PyQt6.QtWidgets import QMessageBox
 from dotenv import load_dotenv
 from plyer import notification
-from helpers.constants import REGEX_PATTERNS
 
 # Load environment variables from a .env file for configuration management.
 load_dotenv()
+
+REGEX_PATTERNS = {
+    'password': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()]).{8,}$',
+    'email': r"[^@]+@[^@]+\.[^@]+"
+}
 
 def setup_logging(level=logging.DEBUG, filename='app.log', handler=logging.FileHandler):
     """
@@ -107,6 +111,7 @@ def is_valid_password(password):
     Returns:
         True if the password meets the criteria, False otherwise.
     """
+    # Centralized configuration for regular expressions
     pattern = re.compile(REGEX_PATTERNS['password'])
     valid = bool(pattern.match(password))
     if not valid:

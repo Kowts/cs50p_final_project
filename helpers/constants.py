@@ -13,8 +13,10 @@ STATUS_INACTIVE = 0
 THEME = get_env_variable('THEME').split(',')
 FONT_SIZE = get_env_variable('FONT_SIZE').split(',')
 
-# Centralized configuration for regular expressions
-REGEX_PATTERNS = {
-    'password': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()]).{8,}$',
-    'email': r"[^@]+@[^@]+\.[^@]+"
+# Constants for theme and font size
+DEFAULT_STYLESHEET = ""
+THEME_MAP = {
+    'Dark': 'dark_blue.xml',
+    'Light': 'light_blue.xml',
+    'Default': DEFAULT_STYLESHEET
 }

@@ -1,7 +1,5 @@
 from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QMessageBox
 from models.task_manager import TaskManager
-from helpers.utils import setup_logging, get_env_variable, is_valid_email, is_valid_username, is_valid_password, is_valid_task_name, hash_password, format_datetime
-from helpers.constants import LOGGING_FORMAT, LOGGING_DATE_FORMAT, LOGGING_LEVEL, LOGGING_FILE_PATH
 
 class RegistrationDialog(QDialog):
     """
@@ -69,8 +67,7 @@ class RegistrationDialog(QDialog):
         self.register_button.clicked.connect(self.register)
         button_layout.addWidget(self.register_button)
         button_layout.addStretch()  # Add the horizontal layout to the main vertical layout
-        self.register_button.setStyleSheet(
-            "background-color: #e1e1e1; padding: 5px;")
+        self.register_button.setStyleSheet("background-color: #e1e1e1; padding: 5px;")
         layout.addLayout(button_layout)
         button_layout = QHBoxLayout()
         button_layout.addStretch()
