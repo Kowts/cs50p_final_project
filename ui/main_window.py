@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QLineEdit,
     QTextEdit,
     QPushButton,
@@ -36,6 +37,7 @@ from ui.dialogs.edit_task_dialog import EditTaskDialog
 from ui.dialogs.calendar_dialog import CalendarDialog
 from ui.dialogs.user_profile_dialog import UserProfileDialog
 from ui.dialogs.find_dialog import FindDialog
+from ui.dialogs.change_password_dialog import ChangePasswordDialog
 from services.notification import NotificationManager
 from services.preferences import PreferencesManager
 from helpers.utils import show_dialog, send_windows_notification
@@ -226,8 +228,7 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("&File")  # Create a "File" menu
         data_menu = menu_bar.addMenu("&Data")  # Create the Data menu
-        settings_menu = menu_bar.addMenu(
-            "&Settings")  # Create the Settings menu
+        settings_menu = menu_bar.addMenu("&Settings")  # Create the Settings menu
         help_menu = menu_bar.addMenu("&Help")  # Create the Help menu
 
         # Create Export action
@@ -303,10 +304,19 @@ class MainWindow(QMainWindow):
         preferences_action.triggered.connect(self.show_preferences_dialog)
         settings_menu.addAction(preferences_action)
 
-        # Create Profile action
-        profile_action = QAction("&Profile", self)
-        profile_action.triggered.connect(self.show_user_profile_dialog)
-        settings_menu.addAction(profile_action)
+        # Create 'Account' submenu under 'Settings'
+        account_submenu = QMenu("Account", self)
+        settings_menu.addMenu(account_submenu)
+
+        # Create 'Edit Profile' action
+        edit_profile_action = QAction("Edit Profile", self)
+        edit_profile_action.triggered.connect(self.show_user_profile_dialog)
+        account_submenu.addAction(edit_profile_action)
+
+        # Create 'Change Password' action
+        change_password_action = QAction("Change Password", self)
+        change_password_action.triggered.connect(self.show_change_password_dialog)
+        account_submenu.addAction(change_password_action)
 
         # Create a widget to hold the table widget and add it to the main layout
         table_widget_container = QWidget()
@@ -358,6 +368,13 @@ class MainWindow(QMainWindow):
         """
         profile_dialog = UserProfileDialog(self.task_manager, self.user_id)
         profile_dialog.exec()
+
+    def show_change_password_dialog(self):
+        """
+        Opens a change password dialog for the current user.
+        """
+        change_password_dialog = ChangePasswordDialog(self.task_manager, self.user_id)
+        change_password_dialog.exec()
 
     def show_about_dialog(self):
         """
@@ -909,8 +926,7 @@ class AddDataDialog(QDialog):
         if color.isValid():
             # Set the background color of the input field to the chosen color
             color_hex = color.name()
-            self.color_input.setStyleSheet(
-                f"background-color: {color_hex.upper()};")
+            self.color_input.setStyleSheet(f"background-color: {color_hex.upper()};")
             # Optionally, display the color's hexadecimal value in the input field
             self.color_input.setText(color_hex.upper())
 
