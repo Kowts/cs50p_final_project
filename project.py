@@ -5,15 +5,11 @@ from models.task_manager import TaskManager
 from ui.main_window import MainWindow
 from ui.dialogs.login_dialog import LoginDialog
 from services.preferences import PreferencesManager
-from helpers.utils import setup_logging, get_env_variable, show_dialog
+from helpers.utils import setup_logging, show_dialog
+from helpers.constants import DEFAULT_USER, DEFAULT_PASSWORD
 
 # Setup logging early for consistent application-wide debugging and tracking
 setup_logging()
-
-# Constants for default user credentials, loaded from environment variables
-DEFAULT_USER = get_env_variable('DEFAULT_USER')
-DEFAULT_PASSWORD = get_env_variable('DEFAULT_PASSWORD')
-
 
 def create_user(username, password):
     """

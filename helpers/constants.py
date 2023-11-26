@@ -20,3 +20,7 @@ THEME_MAP = {
     'Light': 'light_blue.xml',
     'Default': DEFAULT_STYLESHEET
 }
+
+# Constants for default user credentials, loaded from environment variables
+DEFAULT_USER = get_env_variable('DEFAULT_USER')
+DEFAULT_PASSWORD = get_env_variable('DEFAULT_PASSWORD')
