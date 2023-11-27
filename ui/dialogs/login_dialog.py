@@ -128,7 +128,7 @@ class LoginDialog(QDialog):
                 self.show_welcome_message()
                 self.task_manager.save_preferences(self.user_id, {'has_seen_welcome_message': str(True)})  # Save preferences
         else:
-            self.task_manager.log_user_activity(self.user_id, "Login", "Failure")
+            self.task_manager.log_user_activity(user_id, "Login", "Failure")
             self.failed_attempts += 1
             if self.failed_attempts >= MAX_ATTEMPTS:
                 QMessageBox.critical(self, "Login Failed", "Maximum login attempts reached. Exiting application.")
