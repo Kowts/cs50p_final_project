@@ -2,10 +2,10 @@
 preferences.py: Handles user preferences settings, such as theme, notifications, and other customizable options.
 It provides functionalities to save, load, and apply user preferences.
 """
+import logging
 from PyQt6.QtCore import Qt, QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 from qt_material import apply_stylesheet
-import logging
 from helpers.utils import setup_logging
 from helpers.constants import THEME_MAP, DEFAULT_STYLESHEET
 
