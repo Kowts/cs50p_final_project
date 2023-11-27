@@ -8,11 +8,11 @@
   <p align="center">
     CS50P Final Project
     <br />
-    <a href="#">View Demo</a>
+    <a href="#">Video Demo</a>
   </p>
 </div>
 
-## Introduction
+## Description
 
 ProTaskVista is a PyQt-based desktop application designed to streamline personal task management. The application is designed to help users manage their tasks efficiently and it features a modern UI, a robust backend for handling tasks, and various utilities for an enhanced user experience.
 
