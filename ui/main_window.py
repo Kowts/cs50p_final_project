@@ -718,10 +718,11 @@ class MainWindow(QMainWindow):
         """
         Logs out the user, closes the session, hides the main window, and shows the login dialog.
         """
-        # Assuming self.username stores the username of the logged-in user
-        if hasattr(self, 'username'):
+        # Assuming self.user_id stores the user ID of the logged-in user
+        if hasattr(self, 'user_id'):
+            print(f"Logging out user: {self.user_id}")
             # Log the logout event
-            logout_status = self.task_manager.log_user_activity(self.username, "Logout")
+            logout_status = self.task_manager.log_user_activity(self.user_id, "Logout", "Success")
 
             if logout_status is not None:
                 # Handle any errors in logging the logout event, if necessary

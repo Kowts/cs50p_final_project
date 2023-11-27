@@ -183,11 +183,12 @@ class TaskManager:
         # SQL command for creating the tasks table
         conn.execute('''
             CREATE TABLE IF NOT EXISTS user_activity (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 type TEXT NOT NULL,  -- 'Login' or 'Logout'
                 created_at TEXT NOT NULL,
-                status TEXT  -- 'Success', 'Failure', or NULL for logout
+                status TEXT,  -- 'Success', 'Failure', or NULL for logout
+                FOREIGN KEY(user_id) REFERENCES users(id)
             )
         ''')
 
@@ -476,12 +477,12 @@ class TaskManager:
             logging.error(f"Error updating user password: {e}")
             return False
 
-    def log_user_activity(self, username, event_type, status=None):
+    def log_user_activity(self, user_id, event_type, status=None):
         """
         Logs user activity (login/logout) to the database.
 
         Args:
-            username: The username of the user.
+            user_id: The ID of the user.
             event_type: Type of the event ('Login' or 'Logout').
             status: The result of the login attempt ('Success' or 'Failure'), or None for logout.
 
@@ -492,7 +493,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 created_at = format_datetime(QDateTime.currentDateTime())
-                cursor.execute("INSERT INTO user_activity (username, type, created_at, status) VALUES (?, ?, ?, ?)", (username, event_type, created_at, status))
+                cursor.execute("INSERT INTO user_activity (user_id, type, created_at, status) VALUES (?, ?, ?, ?)", (user_id, event_type, created_at, status))
                 return None
         except sqlite3.Error as e:
             return str(e)
