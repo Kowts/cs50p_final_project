@@ -49,11 +49,16 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 - `models/`: Data models and business logic.
   - `task_manager.py`: Manages tasks and database interactions.
   - `task_tracker.py`: Background task tracking logic.
+- `tests/`: Unit tests for the application.
+- `database/`: Database-related files.
+  - `database.db`: Database file - SQLite.
+  - `schema.sql`: Database schema.
 - `services/`: Services and managers for specific functionalities.
   - `notification.py`: Manages sending notifications.
   - `preferences.py`: Handles user preference settings.
 - `helpers/`: Utility functions and helpers.
   - `utils.py`: Common utility functions used across the application.
+  - `constants.py`: Constants used across the application.
 - `resources/`: Static resources like images and icons.
 
 ### Key Components
