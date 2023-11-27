@@ -10,7 +10,7 @@
  Target Server Version : 3035005 (3.35.5)
  File Encoding         : 65001
 
- Date: 27/11/2023 08:46:04
+ Date: 27/11/2023 09:14:23
 */
 
 PRAGMA foreign_keys = false;
@@ -51,7 +51,7 @@ CREATE TABLE "priorities" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "user_id" INTEGER,
   "name" TEXT NOT NULL,
-  "color" TEXT,
+  "color" TEXT NOT NULL,
   "created_at" TEXT NOT NULL,
   "status" INTEGER DEFAULT 1,
   FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -87,12 +87,12 @@ CREATE TABLE "tasks" (
 -- ----------------------------
 DROP TABLE IF EXISTS "user_activity";
 CREATE TABLE "user_activity" (
-  "id" INTEGER,
-  "username" TEXT NOT NULL,
+  "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+  "user_id" INTEGER,
   "type" TEXT NOT NULL,
   "created_at" TEXT NOT NULL,
   "status" TEXT,
-  PRIMARY KEY ("id")
+  FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- ----------------------------
@@ -102,36 +102,16 @@ DROP TABLE IF EXISTS "users";
 CREATE TABLE "users" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "username" TEXT NOT NULL,
+  "email" TEXT,
   "password" TEXT NOT NULL,
   "salt" TEXT NOT NULL,
   "created_at" TEXT NOT NULL,
-  "status" INTEGER DEFAULT 1,
-  "email" TEXT
+  "status" INTEGER DEFAULT 1
 );
-
--- ----------------------------
--- Auto increment value for categories
--- ----------------------------
-UPDATE "sqlite_sequence" SET seq = 9 WHERE name = 'categories';
-
--- ----------------------------
--- Auto increment value for preferences
--- ----------------------------
-UPDATE "sqlite_sequence" SET seq = 424 WHERE name = 'preferences';
-
--- ----------------------------
--- Auto increment value for priorities
--- ----------------------------
-UPDATE "sqlite_sequence" SET seq = 12 WHERE name = 'priorities';
-
--- ----------------------------
--- Auto increment value for tasks
--- ----------------------------
-UPDATE "sqlite_sequence" SET seq = 7 WHERE name = 'tasks';
 
 -- ----------------------------
 -- Auto increment value for users
 -- ----------------------------
-UPDATE "sqlite_sequence" SET seq = 3 WHERE name = 'users';
+UPDATE "sqlite_sequence" SET seq = 1 WHERE name = 'users';
 
 PRAGMA foreign_keys = true;
