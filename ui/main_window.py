@@ -46,20 +46,24 @@ from services.notification import NotificationManager
 from services.preferences import PreferencesManager
 from helpers.utils import show_dialog, send_windows_notification
 
-# Initialize the task ID to row mapping dictionary
+# Mapping task rows in the UI to their unique IDs in the database
 task_row_to_id = {}
 
 class MainWindow(QMainWindow):
     """
-    The main window of the To-Do List Manager application.
-
-    Args:
-        task_manager (TaskManager): An instance of the TaskManager class.
-        login_dialog (LoginDialog): An instance of the LoginDialog class.
-        user_id (int, optional): The ID of the user. Defaults to None.
+    The main window of the application.
     """
 
     def __init__(self, task_manager: TaskManager, login_dialog: LoginDialog, user_id=None, tasks=None):
+        """
+        Initializes the main window with a task manager, login dialog, user ID, and an optional list of tasks.
+
+        Parameters:
+            task_manager (TaskManager): Instance to manage task operations.
+            login_dialog (LoginDialog): Dialog used for logging in the user.
+            user_id (int, optional): ID of the currently logged-in user. Defaults to None.
+            tasks (list, optional): List of tasks to be displayed. Defaults to None.
+        """
         super().__init__()
 
         self.user_id = user_id  # Initialize user_id
@@ -73,10 +77,10 @@ class MainWindow(QMainWindow):
         # Store the login dialog as an attribute
         self.login_dialog = login_dialog
 
-        # Load the icon
+        # Load the application icon
         self.setWindowIcon(QIcon('resources/favicon.ico'))
 
-        # Set the window title and size
+        # Set the window title and default dimensions
         self.setWindowTitle("ProTaskVista")
         self.setGeometry(100, 100, 800, 600)
         self.resize(800, 600)
@@ -573,7 +577,7 @@ class MainWindow(QMainWindow):
                 # Refresh the task list and clear the input fields
                 self.update_task_list()
                 self.clear_entries()
-                send_windows_notification("Task Added", f"Task added successfully! ID: {task_id}", self.task_manager, self.user_id)
+                send_windows_notification("Task Added", f"Task added successfully!", self.task_manager, self.user_id)
             else:
                 show_dialog("Task ID Error", "Failed to retrieve the task ID.", icon=QMessageBox.Icon.Critical)
 
