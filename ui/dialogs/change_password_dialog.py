@@ -94,22 +94,18 @@ class ChangePasswordDialog(QDialog):
 
         # Ensure the new passwords entered match.
         if new_password != repeat_password:
-            QMessageBox.warning(
-                self, "Mismatch", "New passwords do not match.")
+            QMessageBox.warning(self, "Mismatch", "New passwords do not match.")
             return
 
         # Verify the current password with the stored hash.
         if not self.verify_current_password(current_password):
-            QMessageBox.warning(self, "Incorrect",
-                                "Current password is incorrect.")
+            QMessageBox.warning(self, "Incorrect", "Current password is incorrect.")
             return
 
         # Attempt to update the password in the database and provide user feedback.
-        success = self.task_manager.update_user_password(
-            self.user_id, new_password)
+        success = self.task_manager.update_user_password(self.user_id, new_password)
         if success:
-            QMessageBox.information(
-                self, "Success", "Password changed successfully.")
+            QMessageBox.information(self, "Success", "Password changed successfully.")
             self.accept()
         else:
             QMessageBox.warning(self, "Error", "Failed to change password.")
