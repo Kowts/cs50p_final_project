@@ -44,7 +44,7 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 
 ### Directories
 - `ui/`: Contains all user interface components.
-  - `dialogs/`: Dialog windows like login, registration, edit task, and preferences.
+  - `dialogs/`: Dialog windows like login, registration, edit task, and preferences (Each dialog gets its file).
   - `main_window.py`: The main window of the application.
 - `models/`: Data models and business logic.
   - `task_manager.py`: Manages tasks and database interactions.
