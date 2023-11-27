@@ -14,7 +14,7 @@ def mock_task_manager(monkeypatch):
     monkeypatch.setattr("project.TaskManager", lambda: mock_manager)
     return mock_manager
 
-def test_create_user_success(mock_task_manager):
+def test_create_user(mock_task_manager):
     # Mock the create_user method to return None (indicating success)
     mock_task_manager.create_user.return_value = None
     assert create_user("newuser", "password") is None
@@ -26,7 +26,7 @@ def test_create_user_failure(mock_task_manager):
     assert create_user("existinguser", "password") == "Error creating user"
     mock_task_manager.create_user.assert_called_once_with("existinguser", "password")
 
-def test_login_user_valid(mock_task_manager):
+def test_login_user(mock_task_manager):
     # Mock a successful login scenario
     mock_task_manager.verify_user.return_value = (True, 1)
     assert login_user("validuser", "validpassword") == (True, 1)
@@ -38,7 +38,7 @@ def test_login_user_invalid(mock_task_manager):
     assert login_user("invaliduser", "invalidpassword") == (False, None)
     mock_task_manager.verify_user.assert_called_once_with("invaliduser", "invalidpassword")
 
-def test_fetch_tasks_with_data(mock_task_manager):
+def test_fetch_tasks(mock_task_manager):
     # Mock fetching tasks for a user with existing tasks
     mock_task_manager.list_tasks.return_value = ["Task 1", "Task 2"]
     assert fetch_tasks(1) == ["Task 1", "Task 2"]
