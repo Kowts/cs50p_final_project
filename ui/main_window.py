@@ -5,14 +5,13 @@ It orchestrates user interactions and integrates various components like dialogs
 import re
 import logging
 import markdown
-from PyQt6.QtCore import Qt, pyqtSignal, QMarginsF
+from PyQt6.QtCore import Qt, QMarginsF
 from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
 from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QColor, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
-    QColorDialog,
     QTextBrowser,
     QVBoxLayout,
     QHBoxLayout,
@@ -32,7 +31,6 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QFileDialog
 )
-
 from models.task_manager import TaskManager
 from models.task_tracker import TaskTracker
 from ui.dialogs.login_dialog import LoginDialog
@@ -41,6 +39,7 @@ from ui.dialogs.edit_task_dialog import EditTaskDialog
 from ui.dialogs.calendar_dialog import CalendarDialog
 from ui.dialogs.user_profile_dialog import UserProfileDialog
 from ui.dialogs.find_dialog import FindDialog
+from ui.dialogs.add_data_dialog import AddDataDialog
 from ui.dialogs.change_password_dialog import ChangePasswordDialog
 from services.notification import NotificationManager
 from services.preferences import PreferencesManager
@@ -172,6 +171,8 @@ class MainWindow(QMainWindow):
         edit_button.clicked.connect(self.edit_selected_task)
         refresh_button = QPushButton("Refresh Task(s)")
         refresh_button.clicked.connect(self.refresh_task)
+        complete_button = QPushButton("Mark as Complete")
+        complete_button.clicked.connect(self.mark_task_as_complete)
 
         # Horizontal layout for buttons
         button_layout = QHBoxLayout()
@@ -179,6 +180,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(remove_button)
         button_layout.addWidget(edit_button)
         button_layout.addWidget(refresh_button)
+        button_layout.addWidget(complete_button)
         layout.addLayout(button_layout)
 
         # Create and set up the task table
@@ -722,6 +724,37 @@ class MainWindow(QMainWindow):
         self.update_task_list()
         self.clear_entries()
 
+    # Function to mark a task as complete
+    def mark_task_as_complete(self):
+        """
+        Marks the selected task as complete after confirming with the user.
+        """
+        selected_items = self.task_table_widget.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "No Selection", "Please select a task to mark as complete.")
+            return
+
+        selected_row = selected_items[0].row()
+        task_id = task_row_to_id.get(selected_row)
+
+        if task_id is not None:
+            # Ask for confirmation
+            reply = QMessageBox.question(self, "Confirm Completion", "Are you sure you want to mark this task as complete?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                # Call the task manager to update the status of the task
+                self.task_manager.set_task_complete(task_id)
+                # Provide user feedback
+                QMessageBox.information(self, "Task Completed", "The selected task has been marked as complete.")
+                # Refresh the task list to reflect the changes
+                self.update_task_list()
+            else:
+                # If the user clicked 'No', do nothing
+                pass
+        else:
+            QMessageBox.warning(self, "Error", "Could not find the selected task.")
+
+
+    # Function to logout from the application
     def logout(self):
         """
         Logs out the user, closes the session, hides the main window, and shows the login dialog.
@@ -864,99 +897,3 @@ class MainWindow(QMainWindow):
         # If the user accepts the print dialog, proceed to print
         if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
             self.print_preview(printer)
-
-
-class AddDataDialog(QDialog):
-    """
-    A dialog window for adding data (priority or category) to the task manager.
-
-    Attributes:
-    - data_added: A signal to notify that new data was added.
-    - task_manager: The task manager object.
-    - data_type: The type of data to be added ('priority' or 'category').
-    - user_id: The user ID.
-    """
-    data_added = pyqtSignal()  # Signal to notify that new data was added
-
-    def __init__(self, task_manager, data_type, user_id, parent=None):
-        """
-        Initialize the AddDataDialog.
-
-        Parameters:
-        - task_manager: The task manager object.
-        - data_type: The type of data to be added ('priority' or 'category').
-        - user_id: The user ID.
-        - parent: The parent widget (default is None).
-        """
-        super().__init__(parent)
-        self.task_manager = task_manager
-        self.data_type = data_type  # 'priority' or 'category'
-        self.user_id = user_id  # Store the user_id
-        self.setWindowTitle(f"Add {self.data_type.capitalize()}")
-        self.init_ui()
-
-    def init_ui(self):
-        """
-        Initialize the user interface of the dialog.
-        """
-        layout = QVBoxLayout()
-
-        self.data_input = QLineEdit()
-        layout.addWidget(QLabel("Name:"))
-        layout.addWidget(self.data_input)
-
-        if self.data_type == 'priority':
-            # Add label for Color
-            layout.addWidget(QLabel("Color:"))
-            layout.addStretch()
-            # Create layout for the color input group
-            color_layout = QHBoxLayout()
-            self.color_input = QLineEdit()
-            self.color_input.setReadOnly(True)
-            color_layout.addWidget(self.color_input)
-            # Button for picking the calendar color
-            self.calendar_color_button = QPushButton("Pick Color")
-            self.calendar_color_button.clicked.connect(self.pick_color)
-            color_layout.addWidget(self.calendar_color_button)
-            # Add the horizontal layout to the main vertical layout
-            layout.addLayout(color_layout)
-
-        save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_data)
-        layout.addWidget(save_button)
-
-        self.setLayout(layout)
-
-    def pick_color(self):
-        """
-        Opens a color dialog to allow the user to pick a color.
-        """
-        color = QColorDialog.getColor()
-        if color.isValid():
-            # Set the background color of the input field to the chosen color
-            color_hex = color.name()
-            self.color_input.setStyleSheet(f"background-color: {color_hex.upper()};")
-            # Optionally, display the color's hexadecimal value in the input field
-            self.color_input.setText(color_hex.upper())
-
-    def save_data(self):
-        """
-        Save the entered data to the task manager.
-        """
-        data = self.data_input.text().strip()
-
-        if data:
-            if self.data_type == 'priority' and not self.task_manager.priority_exists(data):
-                color = self.color_input.text().strip()
-                self.task_manager.add_priority(data, color, self.user_id)
-                send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager, self.user_id)
-                self.data_added.emit()  # Emit the signal when data is added
-                self.accept()
-            elif self.data_type == 'category' and not self.task_manager.category_exists(data):
-                self.task_manager.add_category(data, self.user_id)
-                send_windows_notification("Success", f"{self.data_type.capitalize()} '{data}' added.", self.task_manager, self.user_id)
-                self.data_added.emit()  # Emit the signal when data is added
-                self.accept()
-            else:
-                QMessageBox.warning(
-                    self, "Exists", f"{self.data_type.capitalize()} '{data}' already exists.")

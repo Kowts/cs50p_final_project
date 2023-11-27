@@ -726,6 +726,23 @@ class TaskManager:
             # Error handling with detailed message
             return f"Import failed: {str(e)}"
 
+    def set_task_complete(self, task_id):
+        """
+        Sets the status of the task with the given ID to complete.
+
+        Parameters:
+            task_id (int): The ID of the task to be marked as complete.
+        """
+        try:
+            with self.get_db_connection() as conn:
+                cursor = conn.cursor()
+                # '2' is the value indicating a task is complete
+                cursor.execute("UPDATE tasks SET status = 2 WHERE id = ?", (task_id,))
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error setting task as complete: {e}")
+            raise
+
     def get_preferences(self, user_id):
         """
         Retrieves user preferences from the database.
