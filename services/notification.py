@@ -1,3 +1,7 @@
+"""
+notification.py: Manages the sending of notifications within the application.
+It encapsulates all the logic required to notify users about different events or task reminders.
+"""
 import os
 import datetime
 import logging

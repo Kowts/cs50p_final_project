@@ -1,3 +1,7 @@
+"""
+utils.py: A collection of utility functions used across the application.
+This includes common tasks such as logging setup, date formatting, and other helper functions.
+"""
 import re
 import sqlite3
 import os

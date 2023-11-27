@@ -1,3 +1,7 @@
+"""
+main_window.py: Contains the MainWindow class, which is the main interface of the application.
+It orchestrates user interactions and integrates various components like dialogs and task management functionalities.
+"""
 import re
 import logging
 import markdown

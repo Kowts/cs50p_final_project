@@ -1,4 +1,7 @@
-import time
+"""
+task_tracker.py: Implements a background thread for tracking due tasks.
+It periodically checks for tasks that are nearing their deadline and emits signals to notify the user.
+"""
 from PyQt6.QtCore import QThread, pyqtSignal
 from models.task_manager import TaskManager
 import logging
@@ -17,7 +20,7 @@ class TaskTracker(QThread):
 
     notify_due_tasks = pyqtSignal(list)
 
-    def __init__(self, task_manager):
+    def __init__(self, task_manager: TaskManager):
         """
         Initializes the TaskTracker object.
 
