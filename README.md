@@ -29,6 +29,16 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 - **Calendar Integration**: View tasks in a calendar format and manage deadlines.
 - **Database Integration**: Robust SQLite database integration for storing tasks and user information.
 - **Responsive UI**: A modern and responsive user interface built with PyQt6.
+- **Notifications**: Get notified about due tasks via email or desktop notifications.
+- **Task Tracking**: A background thread that periodically checks for and notifies about due tasks.
+
+### Non-Functional Requirements
+
+- **Security**: User data is stored securely.
+- **Performance**: The application is responsive and performs well.
+- **Usability**: The application is easy to use.
+- **Maintainability**: The application is easy to maintain.
+- **Extensibility**: The application is easy to extend.
 
 ## Project Structure
 
@@ -57,6 +67,27 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 - `NotificationService`: A service for sending notifications.
 - `PreferencesService`: A service for managing user preferences.
 
+### Database Schema
+
+The application uses a SQLite database for storing data and consists of the following tables:
+
+- `users`: Stores user information such as username, password, and email. The `users` table includes fields for the user's ID (primary key), username, password, password salt, creation date, status, and email.
+
+- `tasks`: Stores task information such as title, description, priority, category, and due date. This table contains fields for task ID (primary key), user ID (linking to the `users` table), task name, due date, priority, category, creation date, and status.
+
+- `sqlite_sequence`: A special table used by SQLite. It is used to keep track of the largest rowid that was inserted into each table that uses AUTOINCREMENT.
+
+- `categories`: Manages categories for tasks. It includes fields for category ID (primary key), user ID, category name, creation date, and status.
+
+- `preferences`: Holds user preferences. This table has fields for preference ID (primary key), user ID, preference key, preference value, creation date, and status.
+
+- `user_activity`: Tracks user activities. It includes fields for activity ID (primary key), username, activity type, creation date, and status.
+
+- `priorities`: Defines different priority levels for tasks. It contains fields for priority ID (primary key), user ID, priority name, color associated with the priority, creation date, and status.
+
+Each table is designed to store specific aspects of user data and task management, facilitating efficient data retrieval and manipulation for the application.
+
+
 ## Design Decisions
 
 ### User Authentication
@@ -78,6 +109,7 @@ Before you begin, ensure you have the following installed:
 - Python 3.6 or higher
 - PyQt6
 - SQLite3 (if using a SQLite database)
+- pytest (testing framework)
 
 You can install PyQt6 using pip:
 
