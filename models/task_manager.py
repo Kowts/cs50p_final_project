@@ -7,7 +7,7 @@ import datetime
 import logging
 from enum import Enum
 from helpers.utils import setup_logging, get_env_variable, is_valid_email, is_valid_username, is_valid_password, is_valid_task_name, hash_password, format_datetime
-from helpers.constants import DATABASE_FILE, DEFAULT_PRIORITIES, DEFAULT_CATEGORIES, STATUS_ACTIVE, STATUS_INACTIVE
+from helpers.constants import DATABASE_FILE, DEFAULT_PRIORITIES, DEFAULT_CATEGORIES, STATUS_ACTIVE, STATUS_INACTIVE, STATUS_COMPLETED
 
 # Initialize logging configuration at application startup
 setup_logging()
@@ -576,7 +576,7 @@ class TaskManager:
 
         Args:
             user_id: The ID of the user.
-            status: The status of the tasks to list. If None, lists active tasks.
+            status: The status of the tasks to list. If None, lists both active and completed tasks.
 
         Returns:
             A list of tasks with priority color matching the given status, empty list in case of an error.
@@ -584,14 +584,26 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                # Modified query to join tasks with priorities and fetch the color
-                query = '''
-                SELECT t.id, t.name, t.due_date, t.priority, t.category, p.color
-                FROM tasks t
-                LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
-                WHERE t.user_id = ? AND t.status = ?
-                '''
-                cursor.execute(query, (user_id, status or STATUS_ACTIVE))
+
+                # If status is None, fetch tasks with status 1 (active) and 2 (completed)
+                if status is None:
+                    status_tuple = (STATUS_ACTIVE, STATUS_COMPLETED)
+                    query = '''
+                    SELECT t.id, t.name, t.due_date, t.priority, t.category, t.status, p.color
+                    FROM tasks t
+                    LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
+                    WHERE t.user_id = ? AND t.status IN (?, ?)
+                    '''
+                    cursor.execute(query, (user_id, *status_tuple))
+                else:
+                    query = '''
+                    SELECT t.id, t.name, t.due_date, t.priority, t.category, t.status, p.color
+                    FROM tasks t
+                    LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
+                    WHERE t.user_id = ? AND t.status = ?
+                    '''
+                    cursor.execute(query, (user_id, status))
+
                 return cursor.fetchall()  # Returns a list of tasks with priority color
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
