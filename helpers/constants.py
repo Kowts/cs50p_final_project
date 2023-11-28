@@ -6,6 +6,7 @@ DEFAULT_PRIORITIES = get_env_variable('DEFAULT_PRIORITIES').split(',')
 DEFAULT_CATEGORIES = get_env_variable('DEFAULT_CATEGORIES').split(',')
 
 # Constants for status
+STATUS_COMPLETED = 2
 STATUS_ACTIVE = 1
 STATUS_INACTIVE = 0
 
