@@ -5,7 +5,6 @@ import sqlite3
 from PyQt6.QtCore import QDateTime
 import datetime
 import logging
-from enum import Enum
 from helpers.utils import setup_logging, get_env_variable, is_valid_email, is_valid_username, is_valid_password, is_valid_task_name, hash_password, format_datetime
 from helpers.constants import DATABASE_FILE, DEFAULT_PRIORITIES, DEFAULT_CATEGORIES, STATUS_ACTIVE, STATUS_INACTIVE, STATUS_COMPLETED
 
