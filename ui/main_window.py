@@ -5,13 +5,14 @@ It orchestrates user interactions and integrates various components like dialogs
 import re
 import logging
 import markdown
-from PyQt6.QtCore import Qt, QMarginsF
+from PyQt6.QtCore import Qt, QMarginsF, QSize
 from PyQt6.QtPrintSupport import QPrintPreviewDialog, QPrinter, QPrintDialog
 from PyQt6.QtGui import QAction, QTextDocument, QPageSize, QPageLayout, QColor, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
+    QStyle,
     QTextBrowser,
     QVBoxLayout,
     QHBoxLayout,
@@ -148,6 +149,7 @@ class MainWindow(QMainWindow):
         # Create the Category Label
         category_label = QLabel("Category:")
         self.category_combobox = QComboBox()
+
         # Load categories from the TaskManager
         categories = self.task_manager.load_categories(self.user_id)
         self.category_combobox.addItems(categories)
@@ -163,16 +165,11 @@ class MainWindow(QMainWindow):
         layout.addLayout(priority_category_layout)
 
         # Create buttons and add them to layout
-        add_button = QPushButton("Add Task")
-        add_button.clicked.connect(self.add_task)
-        remove_button = QPushButton("Remove Selected Task(s)")
-        remove_button.clicked.connect(self.remove_selected_task)
-        edit_button = QPushButton("Edit Selected Task")
-        edit_button.clicked.connect(self.edit_selected_task)
-        refresh_button = QPushButton("Refresh Task(s)")
-        refresh_button.clicked.connect(self.refresh_task)
-        complete_button = QPushButton("Mark as Complete")
-        complete_button.clicked.connect(self.mark_task_as_complete)
+        add_button = self.create_button("Add Task", QStyle.StandardPixmap.SP_DialogSaveButton, self.add_task)
+        remove_button = self.create_button("Remove Task(s)", QStyle.StandardPixmap.SP_TrashIcon, self.remove_selected_task)
+        edit_button = self.create_button("Edit Task", QStyle.StandardPixmap.SP_FileDialogContentsView, self.edit_selected_task)
+        refresh_button = self.create_button("Refresh Task(s)", QStyle.StandardPixmap.SP_BrowserReload, self.refresh_task)
+        complete_button = self.create_button("Mark Complete", QStyle.StandardPixmap.SP_DialogApplyButton, self.mark_task_as_complete)
 
         # Horizontal layout for buttons
         button_layout = QHBoxLayout()
@@ -191,6 +188,18 @@ class MainWindow(QMainWindow):
         # Update the task list to populate the table and menu
         self.update_task_list()
         self.setup_menu_widget()
+
+    def create_button(self, text, icon_enum, callback):
+        """
+        Create a QPushButton with the specified text, icon, and callback function.
+        """
+        app_style = QApplication.style()
+        icon = app_style.standardIcon(icon_enum)
+        button = QPushButton(text)
+        button.setIcon(icon)
+        button.setIconSize(QSize(14, 14))
+        button.clicked.connect(callback)
+        return button
 
     def start_task_tracker(self):
         """Starts the task tracker to check for due tasks."""
@@ -646,33 +655,33 @@ class MainWindow(QMainWindow):
             self.task_manager.update_task(task_details[0], *updated_details)
             self.update_task_list()
 
-    # Function to update the task list
     def update_task_list(self):
+        """
+        Updates the task list in the main window.
+
+        Retrieves tasks for the current user and updates the task table,
+        sorting tasks by their due date and applying different visual styles
+        based on the task status. Completed tasks are visually distinguished
+        with a strikethrough style and a checkmark icon.
+        """
         if self.user_id is None:
-            logging.error(
-                "User ID is None. Cannot update task list without a valid user ID.")
+            logging.error("User ID is None. Cannot update task list without a valid user ID.")
             return
-        # Retrieve the list of tasks using the task manager
+
         try:
             tasks = self.task_manager.list_tasks(self.user_id)
             if not tasks:
-                logging.error("No tasks found for user_id: %s", self.user_id)
+                logging.error(f"No tasks found for user_id: {self.user_id}")
                 return
 
-            # Sort tasks by due date in ascending order (earliest due date first)
-            # Assuming task[2] is the due date
-            tasks.sort(key=lambda task: task[2])
+            # Sort tasks by due date in descending order (most recent first)
+            tasks.sort(key=lambda task: task[2], reverse=True)
 
-            # Reverse the order to get highest due date first
-            tasks.reverse()
-
-            # Clear the existing task_row_to_id dictionary and the table
             task_row_to_id.clear()
             self.task_table_widget.setRowCount(len(tasks))
 
             for row, task in enumerate(tasks):
-                # Unpack the task tuple
-                task_id, name, due_date, priority, category, color = task
+                task_id, name, due_date, priority, category, status, color = task
 
                 # Create QTableWidgetItem for each column
                 name_item = QTableWidgetItem(name)
@@ -680,25 +689,30 @@ class MainWindow(QMainWindow):
                 priority_item = QTableWidgetItem(priority)
                 category_item = QTableWidgetItem(category)
 
-                # Set text alignment to left
-                name_item.setTextAlignment(
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-                due_date_item.setTextAlignment(
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-                priority_item.setTextAlignment(
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-                category_item.setTextAlignment(
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                # Apply visual styles to table items
+                completed_color = QColor(200, 255, 200)  # Light green for completed tasks
+                inactive_color = QColor(128, 128, 128)  # Grey for inactive text
+                checkmark_icon = QIcon('resources/checkmark_icon.png')
 
-                # Set item flags to make cells read-only
-                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                due_date_item.setFlags(due_date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                priority_item.setFlags(priority_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                category_item.setFlags(category_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                for item in [name_item, due_date_item, priority_item, category_item]:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-                # Apply color to the priority cell
-                if color and QColor(color).isValid():
-                    priority_item.setBackground(QColor(color))
+                    if status == 2:  # Status code for completed tasks
+                        item.setForeground(inactive_color)
+                        item.setBackground(completed_color)
+
+                        # Apply strikethrough style
+                        font = item.font()
+                        font.setStrikeOut(True)
+                        item.setFont(font)
+
+                        # Add a checkmark icon to the name item
+                        if item == name_item:
+                            item.setIcon(checkmark_icon)
+
+                    if item == priority_item and color and QColor(color).isValid():
+                        item.setBackground(QColor(color))
 
                 # Set items in the table
                 self.task_table_widget.setItem(row, 0, name_item)
@@ -706,18 +720,14 @@ class MainWindow(QMainWindow):
                 self.task_table_widget.setItem(row, 2, priority_item)
                 self.task_table_widget.setItem(row, 3, category_item)
 
-                # Populate the task ID to row mapping
                 task_row_to_id[row] = task_id
 
             # Apply the table style after updating
             self.task_table_widget.resizeColumnsToContents()
             self.apply_table_style()
 
-            # Set the size policy again to make sure it's effective
-            self.task_table_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
         except Exception as e:
-            logging.error("An error occurred while updating task list: %s", e)
+            logging.error(f"An error occurred while updating task list: {e}")
 
     # Function to refreh the task list
     def refresh_task(self):
@@ -761,7 +771,6 @@ class MainWindow(QMainWindow):
         """
         # Assuming self.user_id stores the user ID of the logged-in user
         if hasattr(self, 'user_id'):
-            print(f"Logging out user: {self.user_id}")
             # Log the logout event
             logout_status = self.task_manager.log_user_activity(self.user_id, "Logout", "Success")
 
@@ -813,8 +822,7 @@ class MainWindow(QMainWindow):
             self, "Import Tasks", "", "CSV Files (*.csv)")
         if file_name:
             try:
-                message = self.task_manager.import_tasks(
-                    file_name, self.user_id)
+                message = self.task_manager.import_tasks(file_name, self.user_id)
                 # Refresh the task list in the UI
                 self.update_task_list()
                 QMessageBox.information(self, "Import Successful", message)
