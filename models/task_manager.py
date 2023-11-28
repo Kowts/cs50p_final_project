@@ -634,6 +634,57 @@ class TaskManager:
         except sqlite3.Error as e:
             return str(e)
 
+    def search_tasks(self, user_id, text, match_case=False, whole_word=False, use_regex=False):
+        """
+        Search tasks based on the provided criteria.
+
+        Args:
+            user_id (int): The user ID for whom to search the tasks.
+            text (str): The text to search for.
+            match_case (bool): Whether the search should be case-sensitive.
+            whole_word (bool): Whether to match whole words only.
+            use_regex (bool): Whether to treat 'text' as a regular expression.
+
+        Returns:
+            list: A list of tasks matching the search criteria.
+        """
+        with self.get_db_connection() as conn:
+            # Define a REGEXP function for regex searches
+            if use_regex:
+                def regexp(expr, item):
+                    reg = re.compile(
+                        expr, re.IGNORECASE if not match_case else 0)
+                    return reg.search(item) is not None
+                conn.create_function("REGEXP", 2, regexp)
+                query = '''
+                    SELECT t.id, t.name, t.due_date, t.priority, t.category, t.status, p.color
+                    FROM tasks t
+                    LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
+                    WHERE t.user_id = ? AND t.name REGEXP ? AND t.status IN (1, 2)
+                '''
+                parameters = [user_id, text]
+            else:
+                like_clause = f"%{text}%"
+                case_clause = "COLLATE RTRIM" if match_case else ""
+                whole_word_clause = f"(t.name LIKE ? OR t.name LIKE ? OR t.name LIKE ? OR t.name = ?)" if whole_word else "t.name LIKE ?"
+                query = f'''
+                    SELECT t.id, t.name, t.due_date, t.priority, t.category, t.status, p.color
+                    FROM tasks t
+                    LEFT JOIN priorities p ON t.priority = p.name AND t.user_id = p.user_id
+                    WHERE t.user_id = ? AND {whole_word_clause} AND t.status IN (1, 2)
+                    {case_clause}
+                '''
+                parameters = [user_id, like_clause, f"{text} %", f"% {text}", f"% {text} %", text] if whole_word else [
+                    user_id, like_clause]
+
+            try:
+                cursor = conn.cursor()
+                cursor.execute(query, parameters)
+                return cursor.fetchall()
+            except Exception as e:
+                logging.error(f"Database search error: {e}")
+                return []
+
     def get_last_inserted_task_id(self):
         """
         Retrieves the ID of the last inserted task in the database.
