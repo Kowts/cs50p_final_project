@@ -467,67 +467,20 @@ class MainWindow(QMainWindow):
         self.category_combobox.addItems(categories)
 
     def search_database(self, text, match_case, whole_word, use_regex):
-
-        # Perform the database search and update the table
-        # This method will need to construct a SQL query based on the search parameters
+        """
+        Search the database for tasks based on the provided search criteria and update the table.
+        """
         if not text:
             # Optionally, alert the user that the search text is empty
             return
 
-        # Establish a database connection
-        with self.task_manager.get_db_connection() as conn:
-
-            # If regex search is enabled, define a REGEXP function
-            if use_regex:
-                def regexp(expr, item):
-                    reg = re.compile(
-                        expr, re.IGNORECASE if not match_case else 0)
-                    return reg.search(item) is not None
-
-                conn.create_function("REGEXP", 2, regexp)
-                search_query = "SELECT name, due_date, priority, category FROM tasks WHERE user_id = ? AND name REGEXP ? AND status = 1"
-                parameters = [self.user_id, text]
-            else:
-                like_clause = f"%{text}%"
-                search_query = "SELECT name, due_date, priority, category FROM tasks WHERE user_id = ? AND name LIKE ? AND status = 1"
-                parameters = [self.user_id, like_clause]
-
-                if match_case:
-                    # Add COLLATE RTRIM to enforce case-sensitive search in SQLite
-                    search_query = "SELECT name, due_date, priority, category FROM tasks WHERE user_id = ? AND name COLLATE RTRIM LIKE ? AND status = 1"
-
-                if whole_word:
-                    # SQLite does not natively support whole-word search, so will use spaces
-                    # to attempt to match whole words (this is a simple workaround and may not be perfect)
-                    search_query = "SELECT name, due_date, priority, category FROM tasks WHERE " \
-                        "user_id = ? AND (name LIKE ? OR name LIKE ? OR name LIKE ? OR name = ?) AND status = 1"
-                    parameters = (
-                        self.user_id, f"{text} %", f"% {text}", f"% {text} %", text)
-
-            # Execute the query
-            try:
-                tasks = self.task_manager.custom_query(search_query, parameters, use_regex=use_regex)
-                self.update_table(tasks)
-            except Exception as e:
-                # Handle any exceptions that occur during the query
-                logging.error(f"An error occurred: {e}")
-
-    def update_table(self, tasks):
-        # Update the table with the results
-        self.task_table_widget.setRowCount(0)  # Clear the table first
-        for task in tasks:
-            # Assuming a task is a tuple like (id, name, due_date, priority, category)
-            row_position = self.task_table_widget.rowCount()
-            self.task_table_widget.insertRow(row_position)
-
-            # Add items to the table
-            for column, task_data in enumerate(task):
-                item = QTableWidgetItem(str(task_data))
-                self.task_table_widget.setItem(row_position, column, item)
-
-        # Resize columns to fit content and update the style
-        self.task_table_widget.resizeColumnsToContents()
-        self.apply_table_style()
+        try:
+            # Call the search_tasks method from TaskManager
+            tasks = self.task_manager.search_tasks(self.user_id, text, match_case, whole_word, use_regex)
+            self.update_task_list(tasks)
+        except Exception as e:
+            # Handle any exceptions that occur during the search
+            logging.error(f"An error occurred during the search: {e}")
 
     def clear_entries(self):
         """
@@ -598,8 +551,7 @@ class MainWindow(QMainWindow):
         """
         selected_items = self.task_table_widget.selectedItems()
         if not selected_items:
-            QMessageBox.warning(self, "No Selection",
-                                "Please select a task to remove.")
+            QMessageBox.warning(self, "No Selection", "Please select a task to remove.")
             return
 
         # Confirm before removing tasks
@@ -655,7 +607,7 @@ class MainWindow(QMainWindow):
             self.task_manager.update_task(task_details[0], *updated_details)
             self.update_task_list()
 
-    def update_task_list(self):
+    def update_task_list(self, tasks=None):
         """
         Updates the task list in the main window.
 
@@ -669,10 +621,8 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            tasks = self.task_manager.list_tasks(self.user_id)
             if not tasks:
-                logging.error(f"No tasks found for user_id: {self.user_id}")
-                return
+                tasks = self.task_manager.list_tasks(self.user_id)
 
             # Sort tasks by due date in descending order (most recent first)
             tasks.sort(key=lambda task: task[2], reverse=True)
