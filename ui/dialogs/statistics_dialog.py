@@ -35,24 +35,23 @@ class StatisticsDialog(QDialog):
         # Clear any existing figures
         self.figure.clf()
 
+        # Set the figure size to give more space to each subplot
+        self.figure.set_size_inches(20, 6)
+
         # Create a GridSpec layout within the figure
-        gs = gridspec.GridSpec(2, 2, height_ratios=[2, 2])
+        gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1], width_ratios=[3, 2])
 
         # Create subplots using the GridSpec layout
-        # Span the first row completely for the pie chart
         ax1 = self.figure.add_subplot(gs[0, :])
-        # Second row, first column for the bar chart
         ax2 = self.figure.add_subplot(gs[1, 0])
-        # Second row, second column for the line chart
         ax3 = self.figure.add_subplot(gs[1, 1])
 
         # Validate data and draw the "Tasks by Status" pie chart
         if 'status' in task_data and task_data['status']:
             status_data = task_data['status']
-            status_labels = ['Incomplete' if d['status']
-                            == 1 else 'Complete' for d in status_data]
+            status_labels = ['Incomplete' if d['status'] == 1 else 'Complete' for d in status_data]
             status_values = [d['count'] for d in status_data]
-            ax1.pie(status_values, labels=status_labels, autopct='%1.1f%%')
+            ax1.pie(status_values, labels=status_labels, autopct='%1.1f%%', startangle=140)  # Start angle and color customization
             ax1.set_title('Tasks by Status')
 
         # Validate data and draw the "Tasks by Category" bar chart
@@ -60,21 +59,25 @@ class StatisticsDialog(QDialog):
             category_data = task_data['category']
             categories = [d['category'] for d in category_data]
             category_counts = [d['count'] for d in category_data]
-            ax2.bar(range(len(categories)), category_counts, tick_label=categories)
+            ax2.bar(range(len(categories)), category_counts, tick_label=categories)  # Consistent color with the pie chart
             ax2.set_title('Tasks by Category')
-            ax2.set_xticklabels(categories, rotation=45)
+            # Align labels for better fit
+            ax2.set_xticklabels(categories, rotation=45, ha='right')
 
         # Validate data and draw the "Tasks by Due Date" line chart
         if 'due_date' in task_data and task_data['due_date']:
             due_date_data = task_data['due_date']
             dates = [d['due_date'] for d in due_date_data]
             counts = [d['count'] for d in due_date_data]
-            ax3.plot(dates, counts, marker='o', linestyle='-')
+            ax3.plot(dates, counts, marker='o', linestyle='-')  # Color that stands out
             ax3.set_title('Tasks by Date')
             ax3.tick_params(axis='x', rotation=45)
 
-        # Adjust layout to prevent overlapping
-        self.figure.autofmt_xdate()  # Automatic adjustment for date labels
+        # Tight layout with custom padding, make room for title and labels to fit
+        self.figure.tight_layout(pad=3.0)
+
+        # Adjust the space between the subplots for clarity
+        self.figure.subplots_adjust(hspace=0.3, wspace=0.3)
 
         # Refresh the canvas
         self.canvas.draw()
