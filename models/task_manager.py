@@ -353,10 +353,11 @@ class TaskManager:
                 user_data = cursor.fetchone()
                 if user_data:
                     return {
-                        "username": user_data[0],
-                        "email": user_data[1],
-                        "password": user_data[2],
-                        "salt": user_data[3]
+                        "name": user_data[0],
+                        "username": user_data[1],
+                        "email": user_data[2],
+                        "password": user_data[3],
+                        "salt": user_data[4]
                     }
                 else:
                     return None
@@ -426,12 +427,13 @@ class TaskManager:
             logging.error(f"Database error in username_exists: {e}")
             return False  # In case of an error, safely return False
 
-    def update_user_profile(self, user_id, username, email):
+    def update_user_profile(self, user_id, name, username, email):
         """
         Updates the user's profile information in the database.
 
         Args:
             user_id (int): The ID of the user whose profile is being updated.
+            name (str): The name of the user.
             username (str): The username of the user.
             email (str): The new email address of the user.
 
@@ -442,9 +444,9 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 # Prepare the update query. You might have more fields to update.
-                query = "UPDATE users SET username = ?, email = ? WHERE id = ?"
+                query = "UPDATE users SET name = ?, username = ?, email = ? WHERE id = ?"
                 # Execute the query with new email and user_id
-                cursor.execute(query, (username, email, user_id))
+                cursor.execute(query, (name, username, email, user_id))
                 # Commit the changes
                 conn.commit()
                 return True

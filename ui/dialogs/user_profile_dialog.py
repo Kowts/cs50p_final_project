@@ -60,20 +60,22 @@ class UserProfileDialog(QDialog):
         # Load user data from the database and populate the fields
         user_data = self.task_manager.get_user_data(self.user_id)
         if user_data:
+            self.name_input.setText(user_data['name'])
             self.username_input.setText(user_data['username'])
             self.email_input.setText(user_data['email'])
 
     def save_profile(self):
 
         # Save the updated profile data to the database
+        updated_name = self.name_input.text()
         updated_username = self.username_input.text()
         updated_email = self.email_input.text()
 
-        if not updated_username or not updated_email:
+        if not updated_username or not updated_email or not updated_name:
             QMessageBox.warning(self, "Invalid Data", "Please fill all fields.")
             return
 
-        success = self.task_manager.update_user_profile(self.user_id, updated_username, updated_email)
+        success = self.task_manager.update_user_profile(self.user_id, updated_name, updated_username, updated_email)
         if success:
             send_windows_notification("Success", "Profile updated successfully.", self.task_manager, self.user_id)
             self.accept()
