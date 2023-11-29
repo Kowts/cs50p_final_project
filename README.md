@@ -140,9 +140,12 @@ pip install PyQt6
    Set the necessary environment variables. You can do this by creating a `.env` file in the root directory and adding the required configurations. For example:
 
    ```
+    # Application Configuration
+    APP_NAME=ProTaskVista
+
     # Database Configuration
-    DATABASE_FILE=database.db
-    MAX_CONNECTION=10
+    DATABASE_FILE=
+    MAX_CONNECTION=
 
     # Default Values
     DEFAULT_PRIORITIES=Low,Medium,High
