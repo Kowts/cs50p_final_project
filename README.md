@@ -86,7 +86,7 @@ The application uses a SQLite database for storing data and consists of the foll
 
 - `preferences`: Holds user preferences. This table has fields for preference ID (primary key), user ID, preference key, preference value, creation date, and status.
 
-- `user_activity`: Tracks user activities. It includes fields for activity ID (primary key), username, activity type, creation date, and status.
+- `user_activity`: Tracks user activities. It includes fields for activity ID (primary key), user_id, activity type, creation date, and status.
 
 - `priorities`: Defines different priority levels for tasks. It contains fields for priority ID (primary key), user ID, priority name, color associated with the priority, creation date, and status.
 
