@@ -67,12 +67,12 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 - `TaskTracker`: A background thread that periodically checks for and notifies about due tasks.
 - `TaskManager`: Central class for task-related operations and database management.
 - `MainWindow`: The primary window of the application, orchestrating various components.
-- `PreferencesDialog`: A dialog window for managing user preferences.
-- `EditTaskDialog`: A dialog window for creating and editing tasks.
-- `LoginDialog`: A dialog window for logging in to the application.
-- `RegistrationDialog`: A dialog window for registering a new user.
+- `Preferences`: A dialog window for managing user preferences.
+- `EditTask`: A dialog window for editing tasks.
+- `Login`: A dialog window for logging in to the application.
+- `Registration`: A dialog window for registering a new user.
 - `NotificationService`: A service for sending notifications.
-- `PreferencesService`: A service for managing user preferences.
+- `Database`: A helper class for database operations.
 
 ### Database Schema
 
