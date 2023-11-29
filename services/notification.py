@@ -13,6 +13,7 @@ from email import encoders
 from typing import Tuple, List
 from models.task_manager import TaskManager
 from helpers.utils import setup_logging, get_env_variable, send_windows_notification
+from helpers.constants import APP_NAME
 
 # Initialize logging at the start of the application for consistent and centralized logging.
 setup_logging()
@@ -56,7 +57,7 @@ class NotificationManager:
                 return True
         return True
 
-    def send_notification(self, notification_id, title, message, frequency="daily", timeout=10, app_name='YourApp'):
+    def send_notification(self, notification_id, title, message, frequency="daily", timeout=10, app_name=APP_NAME):
         """Sends a notification based on user preferences and frequency.
 
         Args:

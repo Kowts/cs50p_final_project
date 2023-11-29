@@ -9,16 +9,8 @@ import hashlib
 import logging
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtWidgets import QMessageBox
-from dotenv import load_dotenv
 from plyer import notification
-
-# Load environment variables from a .env file for configuration management.
-load_dotenv()
-
-REGEX_PATTERNS = {
-    'password': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()]).{8,}$',
-    'email': r"[^@]+@[^@]+\.[^@]+"
-}
+from helpers.constants import APP_NAME, REGEX_PATTERNS
 
 def setup_logging(level=logging.DEBUG, filename='app.log', handler=logging.FileHandler):
     """
@@ -194,7 +186,7 @@ def show_dialog(title, message, icon=QMessageBox.Icon.Information):
     msg.exec()
 
 
-def send_windows_notification(title: str, message: str, task_manager, user_id, timeout: int = 10, app_name: str = 'YourApp') -> bool:
+def send_windows_notification(title: str, message: str, task_manager, user_id, timeout: int = 10, app_name: str = APP_NAME) -> bool:
     """
     Send a Windows notification if the user has enabled notifications.
 

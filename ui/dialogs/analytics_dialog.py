@@ -8,9 +8,9 @@ from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
 from helpers.utils import send_windows_notification
 
-class StatisticsDialog(QDialog):
+class AnalyticsDialog(QDialog):
     """
-    A dialog window that displays statistics about tasks.
+    A dialog window that displays analytics about tasks.
 
     Args:
         task_manager (TaskManager): The task manager object.
@@ -26,7 +26,7 @@ class StatisticsDialog(QDialog):
 
     def __init__(self, task_manager: TaskManager, user_id: int, parent=None):
             """
-            Initializes the StatisticsDialog class.
+            Initializes the AnalyticsDialog class.
 
             Args:
                 task_manager (TaskManager): The task manager object.
@@ -38,7 +38,7 @@ class StatisticsDialog(QDialog):
             self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
             self.user_id = user_id
 
-            self.setWindowTitle("Statistics")
+            self.setWindowTitle("Analytics")
             self.setGeometry(100, 100, 800, 600)
 
             # Load the icon
@@ -58,14 +58,18 @@ class StatisticsDialog(QDialog):
             print_button.clicked.connect(self.print_graphics)
             layout.addWidget(print_button)
 
+            # Load and apply preferences
+            self.preferences_manager.load_and_apply_preferences()
+
+            # Draw the charts
             self.draw_charts()
 
     def draw_charts(self):
         """
-        Draw the charts based on the task statistics retrieved from the task manager.
+        Draw the charts based on the task analytics retrieved from the task manager.
         """
-        # Retrieve the statistics from the task manager
-        task_data = self.task_manager.get_task_statistics(self.user_id)
+        # Retrieve the analytics from the task manager
+        task_data = self.task_manager.get_task_analytics(self.user_id)
 
         # Clear any existing figures
         self.figure.clf()
@@ -122,7 +126,7 @@ class StatisticsDialog(QDialog):
         Save the current figure as an image and print it using the default image viewer.
         """
         # Choose a default file name and location
-        default_filename = 'task_statistics.png'
+        default_filename = 'task_analytics.png'
 
         # Save the figure to the file
         self.figure.savefig(default_filename, dpi=300)

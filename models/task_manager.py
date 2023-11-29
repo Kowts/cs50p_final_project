@@ -740,12 +740,13 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT * FROM tasks WHERE user_id = ? AND status = ?', (user_id, STATUS_ACTIVE))
+                cursor.execute(
+                    'SELECT name, due_date, priority, category, created_at FROM tasks WHERE user_id = ? AND status = ?', (user_id, STATUS_ACTIVE))
                 tasks = cursor.fetchall()
 
             with open(file_path, mode='w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
-                writer.writerow(['ID', 'Name', 'Due Date', 'Priority', 'Category', 'Created At', 'Status'])
+                writer.writerow(['Name', 'Due Date', 'Priority', 'Category', 'Created At'])
                 for task in tasks:
                     writer.writerow(task)
 
@@ -841,15 +842,15 @@ class TaskManager:
             return f"Failed to save preferences: {e}"
         return None  # Success
 
-    def get_task_statistics(self, user_id):
+    def get_task_analytics(self, user_id):
         """
-        Gathers statistical data about tasks for a specific user.
+        Gathers analytical data about tasks for a specific user.
 
         Args:
-            user_id (int): The user ID for whom to gather statistics.
+            user_id (int): The user ID for whom to gather analytics.
 
         Returns:
-            dict: A dictionary containing task statistics such as task count by status, category, etc.
+            dict: A dictionary containing task analytics such as task count by status, category, etc.
         """
         with self.get_db_connection() as conn:
             cursor = conn.cursor()
@@ -890,11 +891,11 @@ class TaskManager:
         category_data = [{'category': row[0], 'count': row[1]} for row in category_data]
         due_date = [{'due_date': row[0], 'count': row[1]} for row in due_date_data]
 
-        # Compile the statistics into a single dictionary
-        statistics = {
+        # Compile the analytics into a single dictionary
+        analytics = {
             'status': status_data,
             'category': category_data,
             'due_date': due_date
         }
 
-        return statistics
+        return analytics

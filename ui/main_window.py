@@ -41,7 +41,7 @@ from ui.dialogs.user_profile_dialog import UserProfileDialog
 from ui.dialogs.find_dialog import FindDialog
 from ui.dialogs.add_data_dialog import AddDataDialog
 from ui.dialogs.change_password_dialog import ChangePasswordDialog
-from ui.dialogs.statistics_dialog import StatisticsDialog
+from ui.dialogs.analytics_dialog import AnalyticsDialog
 from services.notification import NotificationManager
 from services.preferences import PreferencesManager
 from helpers.utils import show_dialog, send_windows_notification
@@ -294,8 +294,8 @@ class MainWindow(QMainWindow):
         calendar_action.triggered.connect(self.show_calendar_dialog)
         data_menu.addAction(calendar_action)
 
-        # Create Statistics action
-        statistics_action = QAction("&Statistics", self)
+        # Create Analytics action
+        statistics_action = QAction("&Analytics", self)
         statistics_action.triggered.connect(self.show_statistics_dialog)
         data_menu.addAction(statistics_action)
 
@@ -390,7 +390,7 @@ class MainWindow(QMainWindow):
         """
         Opens a statistics dialog to display statistics related to the task manager.
         """
-        dialog = StatisticsDialog(self.task_manager, self.user_id, self)
+        dialog = AnalyticsDialog(self.task_manager, self.user_id, self)
         dialog.exec()
 
     def show_user_profile_dialog(self):
@@ -755,7 +755,7 @@ class MainWindow(QMainWindow):
         # This could be updating a status bar, displaying a message box, etc.
         for task in tasks:
             notification_id = f"task_due_{task}"  # Unique ID for each task
-            if self.notification_manager.send_notification(notification_id, "Task Due", f"Task '{task}' is due today.", self.task_manager, frequency="hourly"):
+            if self.notification_manager.send_notification(notification_id, "Task Due", f"Task '{task}' is due today.", frequency="hourly"):
                 logging.info(f"Notification sent for task: {task}")
             else:
                 logging.info(f"Notification already sent for task: {task}")
@@ -764,8 +764,7 @@ class MainWindow(QMainWindow):
         """
         Export tasks to a CSV file.
         """
-        file_name, _ = QFileDialog.getSaveFileName(
-            self, "Export Tasks", "", "CSV Files (*.csv)")
+        file_name, _ = QFileDialog.getSaveFileName(self, "Export Tasks", "", "CSV Files (*.csv)")
         if file_name:
             try:
                 message = self.task_manager.export_tasks(file_name, self.user_id)

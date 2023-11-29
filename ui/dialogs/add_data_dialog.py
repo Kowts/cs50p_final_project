@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from models.task_manager import TaskManager
 from helpers.utils import send_windows_notification
+from services.preferences import PreferencesManager
 
 class AddDataDialog(QDialog):
     """
@@ -38,6 +39,7 @@ class AddDataDialog(QDialog):
         self.task_manager = task_manager
         self.data_type = data_type  # 'priority' or 'category'
         self.user_id = user_id  # Store the user_id
+        self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
         self.setWindowTitle(f"Add {self.data_type.capitalize()}")
         self.init_ui()
 
@@ -70,6 +72,9 @@ class AddDataDialog(QDialog):
         save_button = QPushButton("Save")
         save_button.clicked.connect(self.save_data)
         layout.addWidget(save_button)
+
+        # Load and apply preferences
+        self.preferences_manager.load_and_apply_preferences()
 
         self.setLayout(layout)
 
