@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QDialog, QLabel, QComboBox, QVBoxLayout, QPushButton
 from PyQt6.QtGui import QColor
 from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
-from helpers.utils import get_env_variable, send_windows_notification
+from helpers.utils import send_windows_notification
 from helpers.constants import THEME, FONT_SIZE
 
 class PreferencesDialog(QDialog):

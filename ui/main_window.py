@@ -417,7 +417,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         # Application title
-        title = QLabel("Task Manager")
+        title = QLabel("ProTaskVista")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 

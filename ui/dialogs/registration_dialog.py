@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QDialog, QLabel, QLineEdit, QVBoxLayout, QPushButton, QMessageBox
 from PyQt6.QtGui import QIcon
 from models.task_manager import TaskManager
 
