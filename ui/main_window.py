@@ -654,7 +654,7 @@ class MainWindow(QMainWindow):
                 # Apply visual styles to table items
                 completed_color = QColor(200, 255, 200)  # Light green for completed tasks
                 inactive_color = QColor(128, 128, 128)  # Grey for inactive text
-                checkmark_icon = QIcon('resources/checkmark_icon.png')
+                checkmark = QIcon('resources/checkmark.png')
 
                 for item in [name_item, due_date_item, priority_item, category_item]:
                     item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -671,7 +671,7 @@ class MainWindow(QMainWindow):
 
                         # Add a checkmark icon to the name item
                         if item == name_item:
-                            item.setIcon(checkmark_icon)
+                            item.setIcon(checkmark)
 
                     if item == priority_item and color and QColor(color).isValid():
                         item.setBackground(QColor(color))
