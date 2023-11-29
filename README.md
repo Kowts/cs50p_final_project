@@ -20,6 +20,9 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 
 - **Task CRUD**: Create, read, update, and delete tasks with ease.
 - **Task Prioritization**: Assign priorities to tasks and organize your day.
+- **Task Tracking**: A background thread that periodically checks for and notifies about due tasks.
+- **Task Export and Import**: Export and Import tasks to CSV for offline use.
+- **Task Statistics**: View task statistics such as total tasks, completed tasks, and more.
 - **Search Functionality**: Quickly find tasks with a powerful search feature.
 - **Printing Capability**: Print out task lists for offline reference.
 - **User Customization**: Set preferences such as themes and notification settings.
@@ -30,7 +33,6 @@ ProTaskVista is a PyQt-based desktop application designed to streamline personal
 - **Database Integration**: Robust SQLite database integration for storing tasks and user information.
 - **Responsive UI**: A modern and responsive user interface built with PyQt6.
 - **Notifications**: Get notified about due tasks via email or desktop notifications.
-- **Task Tracking**: A background thread that periodically checks for and notifies about due tasks.
 
 ### Non-Functional Requirements
 
