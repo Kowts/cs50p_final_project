@@ -2,7 +2,6 @@
 main_window.py: Contains the MainWindow class, which is the main interface of the application.
 It orchestrates user interactions and integrates various components like dialogs and task management functionalities.
 """
-import re
 import logging
 import markdown
 from PyQt6.QtCore import Qt, QMarginsF, QSize
@@ -42,6 +41,7 @@ from ui.dialogs.user_profile_dialog import UserProfileDialog
 from ui.dialogs.find_dialog import FindDialog
 from ui.dialogs.add_data_dialog import AddDataDialog
 from ui.dialogs.change_password_dialog import ChangePasswordDialog
+from ui.dialogs.statistics_dialog import StatisticsDialog
 from services.notification import NotificationManager
 from services.preferences import PreferencesManager
 from helpers.utils import show_dialog, send_windows_notification
@@ -294,6 +294,11 @@ class MainWindow(QMainWindow):
         calendar_action.triggered.connect(self.show_calendar_dialog)
         data_menu.addAction(calendar_action)
 
+        # Create Statistics action
+        statistics_action = QAction("&Statistics", self)
+        statistics_action.triggered.connect(self.show_statistics_dialog)
+        data_menu.addAction(statistics_action)
+
         # Add a separator line
         data_menu.addSeparator()
 
@@ -379,6 +384,13 @@ class MainWindow(QMainWindow):
         dialog.setLayout(layout)
 
         # Execute the dialog
+        dialog.exec()
+
+    def show_statistics_dialog(self):
+        """
+        Opens a statistics dialog to display statistics related to the task manager.
+        """
+        dialog = StatisticsDialog(self.task_manager, self.user_id, self)
         dialog.exec()
 
     def show_user_profile_dialog(self):

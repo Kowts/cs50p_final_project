@@ -837,3 +837,61 @@ class TaskManager:
             logging.error(f"Error saving preferences: {e}")
             return f"Failed to save preferences: {e}"
         return None  # Success
+
+    def get_task_statistics(self, user_id):
+        """
+        Gathers statistical data about tasks for a specific user.
+
+        Args:
+            user_id (int): The user ID for whom to gather statistics.
+
+        Returns:
+            dict: A dictionary containing task statistics such as task count by status, category, etc.
+        """
+        with self.get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get counts for incomplete (1) and complete (2) tasks
+            cursor.execute('''
+                SELECT status, COUNT(*)
+                FROM tasks
+                WHERE user_id = ?
+                GROUP BY status
+                HAVING status IN (1, 2)
+            ''', (user_id,))
+            status_data = cursor.fetchall()
+
+
+            # Get counts for each category
+            cursor.execute('''
+                SELECT category, COUNT(*)
+                FROM tasks
+                WHERE user_id = ? AND status IN (1, 2)
+                GROUP BY category
+            ''', (user_id,))
+            category_data = cursor.fetchall()
+
+
+            # Get tasks count by due date
+            cursor.execute('''
+                SELECT due_date, COUNT(*) as count
+                FROM tasks
+                WHERE user_id = ? AND status IN (1, 2)
+                GROUP BY due_date
+                ORDER BY due_date
+            ''', (user_id,))
+            due_date_data = cursor.fetchall()
+
+        # Convert the database results into a more convenient structure if necessary
+        status_data = [{'status': row[0], 'count': row[1]} for row in status_data]
+        category_data = [{'category': row[0], 'count': row[1]} for row in category_data]
+        due_date = [{'due_date': row[0], 'count': row[1]} for row in due_date_data]
+
+        # Compile the statistics into a single dictionary
+        statistics = {
+            'status': status_data,
+            'category': category_data,
+            'due_date': due_date
+        }
+
+        return statistics
