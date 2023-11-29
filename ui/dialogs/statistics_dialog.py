@@ -1,9 +1,12 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout
+import webbrowser
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QFileDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
 from models.task_manager import TaskManager
-from PyQt6.QtGui import QIcon
+from services.preferences import PreferencesManager
+from helpers.utils import send_windows_notification
 
 class StatisticsDialog(QDialog):
     """
@@ -32,6 +35,7 @@ class StatisticsDialog(QDialog):
             """
             super().__init__(parent)
             self.task_manager = task_manager
+            self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
             self.user_id = user_id
 
             self.setWindowTitle("Statistics")
@@ -48,6 +52,11 @@ class StatisticsDialog(QDialog):
             self.figure = Figure()
             self.canvas = FigureCanvas(self.figure)
             layout.addWidget(self.canvas)
+
+            # Button to print the graphics
+            print_button = QPushButton("Print Graphics")
+            print_button.clicked.connect(self.print_graphics)
+            layout.addWidget(print_button)
 
             self.draw_charts()
 
@@ -107,3 +116,36 @@ class StatisticsDialog(QDialog):
 
         # Refresh the canvas
         self.canvas.draw()
+
+    def print_graphics(self):
+        """
+        Save the current figure as an image and print it using the default image viewer.
+        """
+        # Choose a default file name and location
+        default_filename = 'task_statistics.png'
+
+        # Save the figure to the file
+        self.figure.savefig(default_filename, dpi=300)
+
+        # Open the default image viewer to print the image (platform-dependent)
+        webbrowser.open(default_filename)
+
+    def print_graphics(self):
+        """
+        Save the current figure as an image in a specific folder selected by the user.
+        """
+        # Open a file dialog for the user to choose where to save the image
+        file_dialog = QFileDialog(self, "Save Graphics")
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        file_dialog.setNameFilters(["PNG Files (*.png)", "All Files (*)"])
+        file_dialog.setDefaultSuffix("png")
+        file_dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+
+        if file_dialog.exec() == QDialog.DialogCode.Accepted:
+            file_name = file_dialog.selectedFiles()[0]
+            # Save the figure to the file
+            self.figure.savefig(file_name, dpi=300)
+            # Open the default image viewer to print the image (platform-dependent)
+            webbrowser.open(file_name)
+            # Send notification about successful save
+            send_windows_notification("Save Successful", f"Graphics saved to {file_name}", self.task_manager, self.user_id)
