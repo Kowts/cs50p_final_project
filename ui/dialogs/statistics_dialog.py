@@ -6,29 +6,55 @@ from models.task_manager import TaskManager
 from PyQt6.QtGui import QIcon
 
 class StatisticsDialog(QDialog):
+    """
+    A dialog window that displays statistics about tasks.
+
+    Args:
+        task_manager (TaskManager): The task manager object.
+        user_id (int): The ID of the user.
+        parent (QWidget): The parent widget.
+
+    Attributes:
+        task_manager (TaskManager): The task manager object.
+        user_id (int): The ID of the user.
+        figure (Figure): The matplotlib Figure object.
+        canvas (FigureCanvas): The matplotlib FigureCanvas object.
+    """
+
     def __init__(self, task_manager: TaskManager, user_id: int, parent=None):
-        super().__init__(parent)
-        self.task_manager = task_manager
-        self.user_id = user_id
+            """
+            Initializes the StatisticsDialog class.
 
-        self.setWindowTitle("Statistics")
-        self.setGeometry(100, 100, 800, 600)
+            Args:
+                task_manager (TaskManager): The task manager object.
+                user_id (int): The user ID.
+                parent (QWidget, optional): The parent widget. Defaults to None.
+            """
+            super().__init__(parent)
+            self.task_manager = task_manager
+            self.user_id = user_id
 
-        # Load the icon
-        self.setWindowIcon(QIcon('resources/favicon.ico'))
+            self.setWindowTitle("Statistics")
+            self.setGeometry(100, 100, 800, 600)
 
-        # Initialize the layout
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+            # Load the icon
+            self.setWindowIcon(QIcon('resources/favicon.ico'))
 
-        # Create the matplotlib Figure and Canvas
-        self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
-        layout.addWidget(self.canvas)
+            # Initialize the layout
+            layout = QVBoxLayout()
+            self.setLayout(layout)
 
-        self.draw_charts()
+            # Create the matplotlib Figure and Canvas
+            self.figure = Figure()
+            self.canvas = FigureCanvas(self.figure)
+            layout.addWidget(self.canvas)
+
+            self.draw_charts()
 
     def draw_charts(self):
+        """
+        Draw the charts based on the task statistics retrieved from the task manager.
+        """
         # Retrieve the statistics from the task manager
         task_data = self.task_manager.get_task_statistics(self.user_id)
 
