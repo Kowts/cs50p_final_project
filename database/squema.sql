@@ -1,14 +1,7 @@
 /*
- Navicat Premium Data Transfer
 
- Source Server         : CS50P
- Source Server Type    : SQLite
- Source Server Version : 3035005 (3.35.5)
- Source Schema         : main
-
- Target Server Type    : SQLite
- Target Server Version : 3035005 (3.35.5)
- File Encoding         : 65001
+ Source Name         : CS50P
+ Server Type    : SQLite
 
  Date: 27/11/2023 09:14:23
 */
