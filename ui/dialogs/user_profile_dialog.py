@@ -28,6 +28,13 @@ class UserProfileDialog(QDialog):
     def init_ui(self):
         layout = QVBoxLayout(self)
 
+        # Name label and input
+        name_label = QLabel("Name")
+        layout.addWidget(name_label)
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Name")
+        layout.addWidget(self.name_input)
+
         # Username label and input
         username_label = QLabel("Username")
         layout.addWidget(username_label)

@@ -103,6 +103,7 @@ class TaskManager:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
                 username TEXT NOT NULL,
                 email TEXT,
                 password TEXT NOT NULL,
@@ -346,7 +347,7 @@ class TaskManager:
                 cursor = conn.cursor()
 
                 # Assuming the users table has columns like 'id', 'username', 'email', etc.
-                query = "SELECT username, email, password, salt FROM users WHERE id = ?"
+                query = "SELECT name, username, email, password, salt FROM users WHERE id = ?"
                 cursor.execute(query, (user_id,))
 
                 user_data = cursor.fetchone()
