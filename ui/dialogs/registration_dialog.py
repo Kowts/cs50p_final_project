@@ -23,7 +23,7 @@ class RegistrationDialog(QDialog):
         self.task_manager = task_manager
 
         # Set up the login dialog
-        self.setWindowTitle("Create Account  - ProTaskVista")
+        self.setWindowTitle("Create Account")
         self.setGeometry(600, 300, 400, 200)
 
         # Load the icon

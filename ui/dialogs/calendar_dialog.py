@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, QDate
-from PyQt6.QtGui import QColor, QTextCharFormat
+from PyQt6.QtGui import QColor, QTextCharFormat, QIcon
 from PyQt6.QtWidgets import (
     QVBoxLayout,
     QLabel,
@@ -32,6 +32,9 @@ class CalendarDialog(QDialog):
         super().__init__()
         self.setWindowTitle("Calendar")
         self.setGeometry(200, 200, 500, 400)
+
+        # Load the icon
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
 
         self.task_manager = task_manager
         self.user_id = user_id
