@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QDialog, QLabel, QComboBox, QVBoxLayout, QPushButton, QCheckBox, QColorDialog, QHBoxLayout, QLineEdit, QDialogButtonBox
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QIcon
 from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
 from helpers.utils import send_windows_notification
@@ -30,6 +30,8 @@ class PreferencesDialog(QDialog):
         self.preferences_manager = preferences_manager
         self.user_id = self.preferences_manager.user_id
 
+        # application icon and title
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.setWindowTitle("Preferences")
         self.setup_ui()
 

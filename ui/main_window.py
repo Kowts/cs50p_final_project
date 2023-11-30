@@ -209,6 +209,17 @@ class MainWindow(QMainWindow):
         # Dynamically sets a user attribute.
         setattr(self, attribute_name, value)
 
+    def show_welcome_message(self):
+        """
+        Shows a welcome message to the user.
+
+        This method creates a QMessageBox and displays a welcome message to the user.
+        """
+        welcome_message = QMessageBox()
+        welcome_message.setWindowTitle("Welcome to ProTaskVista")
+        welcome_message.setText("Welcome to your Task Manager app! Get started by adding new tasks and enjoy organizing your tasks more efficiently!")
+        welcome_message.exec()
+
     def show_calendar_dialog(self):
         # Opens a calendar dialog for the user to interact with.
         self.calendar_dialog = CalendarDialog(self.task_manager, self.user_id)

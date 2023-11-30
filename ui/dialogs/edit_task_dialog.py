@@ -1,3 +1,4 @@
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QVBoxLayout,
     QLabel,
@@ -29,6 +30,8 @@ class EditTaskDialog(QDialog):
         self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
         self.user_id = user_id  # Add user_id attribute
 
+        # application icon and title
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.setWindowTitle("Edit Task")
         layout = QVBoxLayout(self)
 
@@ -39,10 +42,8 @@ class EditTaskDialog(QDialog):
         self.category_combobox = QComboBox()
 
         # Populate the comboboxes with existing priorities and categories for the given user
-        self.priority_combobox.addItems(
-            self.task_manager.load_priorities(self.user_id))
-        self.category_combobox.addItems(
-            self.task_manager.load_categories(self.user_id))
+        self.priority_combobox.addItems(self.task_manager.load_priorities(self.user_id))
+        self.category_combobox.addItems(self.task_manager.load_categories(self.user_id))
 
         # Add widgets to layout
         layout.addWidget(QLabel("Task Name:"))

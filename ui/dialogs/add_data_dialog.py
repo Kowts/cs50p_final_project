@@ -1,4 +1,5 @@
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QColorDialog,
     QVBoxLayout,
@@ -41,6 +42,7 @@ class AddDataDialog(QDialog):
         self.user_id = user_id  # Store the user_id
         self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
         self.setWindowTitle(f"Add {self.data_type.capitalize()}")
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.init_ui()
 
     def init_ui(self):

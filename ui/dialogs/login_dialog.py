@@ -120,13 +120,6 @@ class LoginDialog(QDialog):
             self.accept()  # Successful login
             self.user_id = user_id  # Store the user_id in the LoginDialog
             self.task_manager.log_user_activity(self.user_id, "Login", "Success")
-
-            # Check if the user has seen the welcome message
-            preferences = self.task_manager.get_preferences(self.user_id)
-            welcome_message = preferences.get('has_seen_welcome_message') == 'True'
-            if not welcome_message:
-                self.show_welcome_message()
-                self.task_manager.save_preferences(self.user_id, {'has_seen_welcome_message': str(True)})  # Save preferences
         else:
             self.task_manager.log_user_activity(user_id, "Login", "Failure")
             self.failed_attempts += 1
@@ -136,17 +129,6 @@ class LoginDialog(QDialog):
             else:
                 remaining_attempts = MAX_ATTEMPTS - self.failed_attempts
                 QMessageBox.warning(self, "Login Failed", f"Invalid username or password. {remaining_attempts} attempts remaining.")
-
-    def show_welcome_message(self):
-        """
-        Shows a welcome message to the user.
-
-        This method creates a QMessageBox and displays a welcome message to the user.
-        """
-        welcome_message = QMessageBox()
-        welcome_message.setWindowTitle("Welcome to ProTaskVista")
-        welcome_message.setText("Welcome to your Task Manager app! Get started by adding new tasks and enjoy organizing your tasks more efficiently!")
-        welcome_message.exec()
 
     def get_user_id(self):
         """

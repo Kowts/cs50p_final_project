@@ -39,6 +39,8 @@ class FindDialog(QDialog):
         self.task_manager = task_manager
         self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
 
+        # application icon and title
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.setWindowTitle("Find")
         self.init_ui()
 
@@ -84,10 +86,6 @@ class FindDialog(QDialog):
         buttons_layout.addWidget(self.cancel_button)
         layout.addLayout(buttons_layout)
 
-        # Styling buttons for a better visual appeal
-        self.find_button.setStyleSheet("background-color: lightblue; padding: 5px;")
-        self.cancel_button.setStyleSheet("background-color: lightcoral; padding: 5px;")
-
         self.setLayout(layout)
 
     def find_next(self):
@@ -96,8 +94,7 @@ class FindDialog(QDialog):
         """
         text = self.find_what_input.text().strip()
         if not text:
-            QMessageBox.warning(self, "Empty Search",
-                                "Please enter a search term.")
+            QMessageBox.warning(self, "Empty Search", "Please enter a search term.")
             return
 
         # Retrieve search parameters

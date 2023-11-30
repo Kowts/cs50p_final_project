@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox
 )
+from PyQt6.QtGui import QIcon
 from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
 from helpers.utils import send_windows_notification
@@ -17,6 +18,8 @@ class UserProfileDialog(QDialog):
         self.user_id = user_id
         self.preferences_manager = PreferencesManager(self, self.task_manager, user_id)  # Initialize PreferencesManager
 
+        # application icon and title
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.setWindowTitle("Edit Profile")
         self.setGeometry(300, 300, 300, 200)
 

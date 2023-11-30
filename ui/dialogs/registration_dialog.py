@@ -22,12 +22,10 @@ class RegistrationDialog(QDialog):
 
         self.task_manager = task_manager
 
-        # Set up the login dialog
+        # application icon and title
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.setWindowTitle("Create Account")
         self.setGeometry(600, 300, 400, 200)
-
-        # Load the icon
-        self.setWindowIcon(QIcon('resources/favicon.ico'))
 
         self.init_ui()
 

@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 )
+from PyQt6.QtGui import QIcon
 from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
 from helpers.utils import hash_password
@@ -35,6 +36,7 @@ class ChangePasswordDialog(QDialog):
 
         # Set window title and size for the change password dialog.
         self.setWindowTitle("Change Password")
+        self.setWindowIcon(QIcon('resources/favicon.ico'))
         self.setGeometry(600, 300, 400, 200)
 
         # Initialize the UI components.
