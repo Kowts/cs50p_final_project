@@ -727,7 +727,7 @@ class MainWindow(QMainWindow):
                 # Call the task manager to update the status of the task
                 self.task_manager.set_task_complete(task_id)
                 # Provide user feedback
-                QMessageBox.information(self, "Task Completed", "The selected task has been marked as complete.")
+                send_windows_notification("Task Completed", "The selected task has been marked as complete.", self.task_manager, self.user_id)
                 # Refresh the task list to reflect the changes
                 self.update_task_list()
             else:
@@ -735,7 +735,6 @@ class MainWindow(QMainWindow):
                 pass
         else:
             QMessageBox.warning(self, "Error", "Could not find the selected task.")
-
 
     # Function to logout from the application
     def logout(self):

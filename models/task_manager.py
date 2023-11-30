@@ -520,7 +520,7 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                created_at = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                created_at = format_datetime(QDateTime.currentDateTime())
                 cursor.execute(
                     "INSERT INTO tasks (user_id, name, due_date, priority, category, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (user_id, task_name, due_date, priority,category, created_at, STATUS_ACTIVE)
@@ -741,7 +741,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    'SELECT name, due_date, priority, category, created_at FROM tasks WHERE user_id = ? AND status = ?', (user_id, STATUS_ACTIVE))
+                    'SELECT name, due_date, priority, category, created_at FROM tasks WHERE user_id = ? AND status IN (1, 2)', (user_id,))
                 tasks = cursor.fetchall()
 
             with open(file_path, mode='w', newline='', encoding='utf-8') as file:
