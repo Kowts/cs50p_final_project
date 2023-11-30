@@ -114,9 +114,19 @@ def main():
             if valid_login and fetched_user_id == user_id:
                 # Fetch the tasks for the logged-in user and initialize the main window with these tasks
                 tasks = fetch_tasks(user_id)
+
                 # Start the main window with fetched tasks (this step may vary based on your implementation)
                 main_window = MainWindow(task_manager, login_dialog, user_id, tasks)
-                main_window.start_task_tracker()  # Start the task tracker in the main window
+
+                # Check if the user has seen the welcome message
+                preferences = task_manager.get_preferences(user_id)
+                welcome_message = preferences.get('has_seen_welcome_message') == 'True'
+                if not welcome_message:
+                    main_window.show_welcome_message()
+                    task_manager.save_preferences(user_id, {'has_seen_welcome_message': str(True)})  # Save preferences
+
+                # Start the task tracker in the main window
+                main_window.start_task_tracker()
                 main_window.show()  # Show the main window
                 sys.exit(app.exec())  # Start the application's event loop
             else:
