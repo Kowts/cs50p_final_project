@@ -771,7 +771,6 @@ class TaskManager:
                 with self.get_db_connection() as conn:
                     cursor = conn.cursor()
                     for row in reader:
-                        print(row)
                         # Ensure each row has the required number of elements
                         if len(row) >= 5:
                             task_name, due_date, priority, category = row[0:4]
