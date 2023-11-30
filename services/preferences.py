@@ -37,7 +37,7 @@ class PreferencesManager(QObject):
         """Applies a theme to the application based on the user's preference.
 
         Args:
-            theme_name (str): Name of the theme to apply (e.g., 'Dark', 'Light').
+            theme_name (str): Name of the theme to apply (e.g., 'Dark', 'Light', 'Default').
         """
         app = QApplication.instance()
 

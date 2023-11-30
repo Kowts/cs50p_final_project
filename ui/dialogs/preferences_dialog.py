@@ -163,8 +163,8 @@ class PreferencesDialog(QDialog):
         font_size = preferences.get('font_size', '12')  # Default to '12'
         self.font_size_selector.setCurrentText(font_size)
 
-        # Get the saved theme (default to "Light" if not set)
-        saved_theme = preferences.get('theme', 'Light')
+        # Get the saved theme
+        saved_theme = preferences.get('theme', 'Default')
 
         # Find the index of the saved theme in the combo box and set it
         index = self.theme_selector.findText(saved_theme)

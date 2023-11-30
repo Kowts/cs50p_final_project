@@ -17,9 +17,10 @@ THEME = os.getenv('THEME').split(',')
 FONT_SIZE = os.getenv('FONT_SIZE').split(',')
 DEFAULT_STYLESHEET = ""
 THEME_MAP = {
-    'Dark': 'dark_blue.xml',
+    'Default': DEFAULT_STYLESHEET,
     'Light': 'light_blue.xml',
-    'Default': DEFAULT_STYLESHEET
+    'Dark': 'dark_blue.xml'
+
 }
 
 # Constants for default user credentials, loaded from environment variables
