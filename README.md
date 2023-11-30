@@ -139,7 +139,7 @@ pip install PyQt6
 
    Set the necessary environment variables. You can do this by creating a `.env` file in the root directory and adding the required configurations. For example:
 
-   ```
+   ```bash
     # Application Configuration
     APP_NAME=ProTaskVista
 
