@@ -1,13 +1,12 @@
 import webbrowser
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QFileDialog
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QFileDialog, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
 from models.task_manager import TaskManager
 from services.preferences import PreferencesManager
 from helpers.utils import send_windows_notification
-
 class AnalyticsDialog(QDialog):
     """
     A dialog window that displays analytics about tasks.
@@ -56,7 +55,16 @@ class AnalyticsDialog(QDialog):
             # Button to print the graphics
             print_button = QPushButton("Print Graphics")
             print_button.clicked.connect(self.print_graphics)
-            layout.addWidget(print_button)
+
+            # Button to close the graphics
+            close_button = QPushButton("Close")
+            close_button.clicked.connect(self.reject)
+
+            # Layout for buttons
+            buttons_layout = QHBoxLayout()
+            buttons_layout.addWidget(print_button)
+            buttons_layout.addWidget(close_button)
+            layout.addLayout(buttons_layout)
 
             # Load and apply preferences
             self.preferences_manager.load_and_apply_preferences()
