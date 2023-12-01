@@ -770,7 +770,8 @@ class MainWindow(QMainWindow):
         # This could be updating a status bar, displaying a message box, etc.
         for task in tasks:
             notification_id = f"task_due_{task}"  # Unique ID for each task
-            if self.notification_manager.send_notification(notification_id, "Task Due", f"Task '{task}' is due today.", frequency="hourly"):
+            enable_notifications = self.notification_manager.send_notification(notification_id, "Task Due", f"Task '{task}' is due today.", frequency="hourly")
+            if enable_notifications:
                 logging.info(f"Notification sent for task: {task}")
             else:
                 logging.info(f"Notification already sent for task: {task}")

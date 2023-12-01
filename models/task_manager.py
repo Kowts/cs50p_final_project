@@ -697,8 +697,8 @@ class TaskManager:
         try:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT last_insert_rowid()")
-                task_id = cursor.fetchone()[0]
+                cursor.execute("SELECT last_insert_rowid()") # SQLite specific query
+                task_id = cursor.fetchone()[0] # Fetch the first column of the first row
             return task_id
         except sqlite3.Error:
             return None  # Return None if there's an error during the operation
@@ -716,8 +716,8 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 query = "SELECT name FROM tasks WHERE due_date = ? AND status = ?"
-                cursor.execute(query, (today, STATUS_ACTIVE))
-                tasks = [row[0] for row in cursor.fetchall()]
+                cursor.execute(query, (today, STATUS_ACTIVE)) # '1' is the value indicating an active task
+                tasks = [row[0] for row in cursor.fetchall()] # Fetch all rows and extract the task names
                 logging.info(f"Tasks due today: {tasks}")
                 return tasks
         except sqlite3.DatabaseError as e:

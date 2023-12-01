@@ -35,7 +35,7 @@ class TaskTracker(QThread):
         Runs the task tracking process.
         """
         while True:
-            self.sleep(10)  # Check every hour
+            self.sleep(10) # Sleep for 10 seconds
             logging.info("Checking for due tasks...")
             today_tasks = self.task_manager.get_due_tasks()
             if today_tasks:
