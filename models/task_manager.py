@@ -35,7 +35,7 @@ class TaskManager:
             conn = sqlite3.connect(self.db_file)
             return conn
         except sqlite3.Error as e:
-            # You may want to handle this error differently depending on your application's needs
+            # Handles database-specific errors with logging for troubleshooting
             logging.error(f"Database connection error: {e}")
             raise
 

@@ -855,7 +855,7 @@ class MainWindow(QMainWindow):
         formatted_data += "</style></head><body>"
         formatted_data += "<table>"  # Start the table
 
-        # Add table header (adjust the headers as per your task attributes)
+        # Add table header
         formatted_data += "<tr><th>Name</th><th>Due Date</th><th>Priority</th><th>Category</th></tr>"
 
         # Loop through the tasks and create HTML table rows

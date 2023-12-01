@@ -115,7 +115,7 @@ def main():
                 # Fetch the tasks for the logged-in user and initialize the main window with these tasks
                 tasks = fetch_tasks(user_id)
 
-                # Start the main window with fetched tasks (this step may vary based on your implementation)
+                # Start the main window with fetched tasks
                 main_window = MainWindow(task_manager, login_dialog, user_id, tasks)
 
                 # Check if the user has seen the welcome message

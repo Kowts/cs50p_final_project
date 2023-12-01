@@ -195,7 +195,7 @@ def send_windows_notification(title: str, message: str, task_manager, user_id, t
         message: The message content of the notification.
         task_manager: Instance of TaskManager to retrieve user preferences.
         timeout: The time in seconds for the notification to disappear.
-        app_name: The name of your application.
+        app_name: The name of application.
 
     Returns:
         True if the notification was sent successfully, False otherwise.
