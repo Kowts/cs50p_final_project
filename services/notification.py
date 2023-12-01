@@ -82,9 +82,15 @@ class NotificationManager:
             preferences = self.task_manager.get_preferences(self.user_id)
             enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
 
+            # Retrieve user email to send an email notification
+            user_info = self.task_manager.get_user_data(self.user_id)
+            email = user_info['email'] if user_info else None
+
             if enable_notifications and self.should_send_notification(notification_id, frequency):
-                # Send the notification if enabled and frequency conditions are met
+
+                # Send the notification and Send an email
                 success = send_windows_notification(title, message, self.task_manager, self.user_id, timeout, app_name)
+                self.send_email(email, title, message) # Send an email
                 if success:
                     # Update the last sent time on successful notification
                     self.sent_notifications[notification_id] = datetime.datetime.now()
@@ -152,10 +158,16 @@ class NotificationManager:
         """
 
         # Check user preference for email notifications
-        preferences = self.task_manager.get_preferences()
+        preferences = self.task_manager.get_preferences(self.user_id)
         email_notification_enabled = preferences.get('email_notification', 'True') == 'True'
         if not email_notification_enabled:
+            # Log and return if email notifications are disabled
             logging.info("Email notification is disabled in user preferences.")
+            return
+
+        if not recipient_email or not subject or not message_body:
+            # Ensure that all required parameters are provided
+            logging.error("Recipient email or subject or message body cannot be empty.")
             return
 
         # Connect to the SMTP server
