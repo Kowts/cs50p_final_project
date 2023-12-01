@@ -67,8 +67,7 @@ class PreferencesManager(QObject):
         Args:
             enable_notifications (bool): Flag indicating whether notifications should be enabled.
         """
-        # Implement the logic for enabling or disabling notifications
-        # This could involve interacting with the notification system in your application
+        # app = QApplication.instance()
         pass
 
     def apply_email_notification(self, email_notification):
