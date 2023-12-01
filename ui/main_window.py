@@ -695,8 +695,13 @@ class MainWindow(QMainWindow):
 
                 task_row_to_id[row] = task_id
 
+            # Set initial fixed size for 'Task Name' column
+            self.task_table_widget.setColumnWidth(0, 300)
+
             # Apply the table style after updating
-            self.task_table_widget.resizeColumnsToContents()
+            # self.task_table_widget.resizeColumnsToContents()
+            self.task_table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            self.task_table_widget.horizontalHeader().setStretchLastSection(True)
             self.apply_table_style()
 
         except Exception as e:
