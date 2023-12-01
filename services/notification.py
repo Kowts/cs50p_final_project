@@ -27,6 +27,10 @@ class NotificationManager:
         self.task_manager = task_manager
         self.user_id = user_id
 
+    # Helper function to update the last sent time for a notification
+    def update_last_sent_time(self, notification_id):
+        self.sent_notifications[notification_id] = datetime.datetime.now()
+
     def should_send_notification(self, notification_id, frequency="daily"):
         """Determines if a notification should be sent based on its frequency.
 
@@ -64,10 +68,9 @@ class NotificationManager:
             notification_id (str): Unique identifier for the notification.
             title (str): Title of the notification.
             message (str): Notification message content.
-            task_manager (TaskManager): Task manager instance for additional operations.
-            frequency (str): Frequency of the notification.
-            timeout (int): Timeout for the notification.
-            app_name (str): Name of the application sending the notification.
+            frequency (str): Frequency of the notification. Defaults to 'daily'.
+            timeout (int): Timeout for the notification. Defaults to 10.
+            app_name (str): Name of the application sending the notification. Defaults to APP_NAME.
 
         Returns:
             bool: True if the notification was successfully sent, False otherwise.
@@ -82,26 +85,26 @@ class NotificationManager:
             preferences = self.task_manager.get_preferences(self.user_id)
             enable_notifications = preferences.get('enable_notifications', 'True') == 'True'
 
-            # Retrieve user email to send an email notification
-            user_info = self.task_manager.get_user_data(self.user_id)
-            email = user_info['email'] if user_info else None
-
             if enable_notifications and self.should_send_notification(notification_id, frequency):
 
+                # Retrieve user email to send an email notification
+                user_info = self.task_manager.get_user_data(self.user_id)
+                email = user_info['email'] if user_info else None
+
                 # Send the notification and Send an email
-                success = send_windows_notification(title, message, self.task_manager, self.user_id, timeout, app_name)
-                self.send_email(email, title, message) # Send an email
+                success = send_windows_notification(title, message, self.task_manager, self.user_id, timeout=timeout, app_name=app_name)
                 if success:
                     # Update the last sent time on successful notification
-                    self.sent_notifications[notification_id] = datetime.datetime.now()
+                    self.update_last_sent_time(notification_id)
+                    if email:
+                        self.send_email(email, title, message)  # Send an email
                     logging.info(f"Notification sent: {title}")
                 else:
                     logging.warning(f"Failed to send notification: {title}")
                 return success
             else:
                 # Log if notifications are disabled or already sent as per frequency
-                logging.info(
-                    f"Notification not sent: User has disabled notifications or already sent according to frequency '{frequency}'")
+                logging.info(f"Notification not sent: User has disabled notifications or already sent according to frequency '{frequency}'")
                 return False
         except Exception as e:
             # Log any exceptions encountered during notification sending
