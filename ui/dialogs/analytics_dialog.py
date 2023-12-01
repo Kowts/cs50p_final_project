@@ -98,7 +98,7 @@ class AnalyticsDialog(QDialog):
             status_data = task_data['status']
             status_labels = ['Incomplete' if d['status'] == 1 else 'Complete' for d in status_data]
             status_values = [d['count'] for d in status_data]
-            ax1.pie(status_values, labels=status_labels, autopct='%1.1f%%', startangle=140)  # Start angle and color customization
+            ax1.pie(status_values, labels=status_labels, autopct='%1.1f%%', startangle=140)
             ax1.set_title('Tasks by Status')
 
         # Validate data and draw the "Tasks by Category" bar chart
@@ -106,9 +106,8 @@ class AnalyticsDialog(QDialog):
             category_data = task_data['category']
             categories = [d['category'] for d in category_data]
             category_counts = [d['count'] for d in category_data]
-            ax2.bar(range(len(categories)), category_counts, tick_label=categories)  # Consistent color with the pie chart
+            ax2.bar(range(len(categories)), category_counts, tick_label=categories)
             ax2.set_title('Tasks by Category')
-            # Align labels for better fit
             ax2.set_xticklabels(categories, rotation=45, ha='right')
 
         # Validate data and draw the "Tasks by Due Date" line chart
@@ -116,7 +115,7 @@ class AnalyticsDialog(QDialog):
             due_date_data = task_data['due_date']
             dates = [d['due_date'] for d in due_date_data]
             counts = [d['count'] for d in due_date_data]
-            ax3.plot(dates, counts, marker='o', linestyle='-')  # Color that stands out
+            ax3.plot(dates, counts, marker='o', linestyle='-')
             ax3.set_title('Tasks by Date')
             ax3.tick_params(axis='x', rotation=45)
 
