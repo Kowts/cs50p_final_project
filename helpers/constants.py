@@ -1,3 +1,5 @@
+"""This module contains constants used throughout the application. """
+
 import os
 
 APP_NAME = os.getenv('APP_NAME')
