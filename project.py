@@ -69,7 +69,7 @@ def fetch_tasks(user_id):
         return []
 
 
-def main():
+def main():  # sourcery skip: extract-method
     """
     The main function of the program.
     This function initializes the application, task manager, and other necessary components.
@@ -84,9 +84,7 @@ def main():
         # Check for existing users in the system; create a default user if none found
         existing_users = task_manager.get_existing_users()
         if not existing_users:
-            # Create a default user if no users are found in the system
-            error_message = create_user(DEFAULT_USER, DEFAULT_PASSWORD)
-            if error_message:
+            if error_message := create_user(DEFAULT_USER, DEFAULT_PASSWORD):
                 # Display an error dialog if user creation fails
                 show_dialog("User Creation Error", error_message, icon=QMessageBox.Icon.Critical)
             else:
