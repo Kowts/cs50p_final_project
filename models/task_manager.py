@@ -216,10 +216,12 @@ class TaskManager:
         """
         try:
             with self.get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('SELECT name FROM priorities WHERE user_id = ?', (user_id,))
-                priorities = [row[0] for row in cursor.fetchall()]
-                return priorities + DEFAULT_PRIORITIES
+                return self.fetch_user_data(
+                    conn,
+                    'SELECT name FROM priorities WHERE user_id = ?',
+                    user_id,
+                    DEFAULT_PRIORITIES,
+                )
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
             return []
@@ -239,16 +241,25 @@ class TaskManager:
         """
         try:
             with self.get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('SELECT name FROM categories WHERE user_id = ?', (user_id,))
-                categories = [row[0] for row in cursor.fetchall()]
-                return categories + DEFAULT_CATEGORIES
+                return self.fetch_user_data(
+                    conn,
+                    'SELECT name FROM categories WHERE user_id = ?',
+                    user_id,
+                    DEFAULT_CATEGORIES,
+                )
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
             return []
         except Exception as e:
             logging.error(f"An error occurred: {e}")
             return []
+
+    # TODO Rename this here and in `load_priorities` and `load_categories`
+    def fetch_user_data(self, conn, query, user_id, param):
+        cursor = conn.cursor()
+        cursor.execute(query, (user_id, ))
+        priorities = [row[0] for row in cursor.fetchall()]
+        return priorities + param
 
     def priority_exists(self, priority_name):
         """
