@@ -69,7 +69,7 @@ def fetch_tasks(user_id):
         return []
 
 
-def main():  # sourcery skip: extract-method
+def main():
     """
     The main function of the program.
     This function initializes the application, task manager, and other necessary components.

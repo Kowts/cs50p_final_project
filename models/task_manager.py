@@ -204,7 +204,7 @@ class TaskManager:
             )
         ''')
 
-    def load_priorities(self, user_id):  # sourcery skip: class-extract-method
+    def load_priorities(self, user_id):
         """
         Loads priorities from the database for a specific user.
 
