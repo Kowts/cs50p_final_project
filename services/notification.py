@@ -42,10 +42,7 @@ class NotificationManager:
             bool: True if the notification should be sent, False otherwise.
         """
         current_time = datetime.datetime.now()
-        last_sent_time = self.sent_notifications.get(notification_id)
-
-        # Evaluate based on the frequency if the notification should be sent
-        if last_sent_time:
+        if last_sent_time := self.sent_notifications.get(notification_id):
             if frequency == "daily":
                 # Check if the notification was already sent today
                 return last_sent_time.date() != current_time.date()
@@ -146,7 +143,7 @@ class NotificationManager:
         # Return the SMTP server object and the username
         return smtp_server, username
 
-    def send_email(self, recipient_email: str, subject: str, message_body: str, attachment_paths: List[str] = []) -> None:
+    def send_email(self, recipient_email: str, subject: str, message_body: str, attachment_paths: List[str] = None) -> None:
         """
         Sends an email with optional attachments.
 
@@ -157,6 +154,8 @@ class NotificationManager:
         - attachment_paths: A list of file paths to attach to the email.
         """
 
+        if attachment_paths is None:
+            attachment_paths = []
         # Check user preference for email notifications
         preferences = self.task_manager.get_preferences(self.user_id)
         email_notification_enabled = preferences.get('email_notification', 'True') == 'True'

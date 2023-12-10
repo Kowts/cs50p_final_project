@@ -32,8 +32,7 @@ class TaskManager:
             A connection object to the SQLite database.
         """
         try:
-            conn = sqlite3.connect(self.db_file)
-            return conn
+            return sqlite3.connect(self.db_file)
         except sqlite3.Error as e:
             # Handles database-specific errors with logging for troubleshooting
             logging.error(f"Database connection error: {e}")
@@ -45,8 +44,9 @@ class TaskManager:
         """
         # List of required environment variables
         required_vars = ['DATABASE_FILE', 'MAX_CONNECTION', 'DEFAULT_USER', 'DEFAULT_PASSWORD']
-        missing_vars = [var for var in required_vars if not get_env_variable(var)]
-        if missing_vars:
+        if missing_vars := [
+            var for var in required_vars if not get_env_variable(var)
+        ]:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
         if not os.path.exists(self.db_file):
@@ -70,16 +70,28 @@ class TaskManager:
         try:
             # Establish database connection and create tables
             with self.get_db_connection() as conn:
-                self.create_users_table(conn)
-                self.create_tasks_table(conn)
-                self.create_priorities_table(conn)
-                self.create_categories_table(conn)
-                self.create_preferences_table(conn)
-                self.create_user_activity_table(conn)
+                self.setup_database(conn)
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
         except Exception as e:
             logging.error(f"An error occurred: {e}")
+
+    def create_database_tables(self, conn):
+        """
+        Helper method to set up the database by creating necessary tables.
+
+        Args:
+            conn (Connection): The database connection object.
+
+        Returns:
+            None
+        """
+        self.create_users_table(conn)
+        self.create_tasks_table(conn)
+        self.create_priorities_table(conn)
+        self.create_categories_table(conn)
+        self.create_preferences_table(conn)
+        self.create_user_activity_table(conn)
 
     def custom_query(self, query, parameters, use_regex=False):
         try:
@@ -192,7 +204,7 @@ class TaskManager:
             )
         ''')
 
-    def load_priorities(self, user_id):
+    def load_priorities(self, user_id):  # sourcery skip: class-extract-method
         """
         Loads priorities from the database for a specific user.
 
@@ -249,9 +261,9 @@ class TaskManager:
             bool: True if priority exists, False otherwise.
         """
         with self.get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM priorities WHERE name = ?", (priority_name,))
-            return cursor.fetchone() is not None
+            return self.verify_if_exists(
+                conn, "SELECT 1 FROM priorities WHERE name = ?", priority_name
+            )
 
     def add_priority(self, priority_name, color, user_id):
         """
@@ -285,9 +297,9 @@ class TaskManager:
             bool: True if the category exists, False otherwise.
         """
         with self.get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM categories WHERE name = ?", (category_name,))
-            return cursor.fetchone() is not None
+            return self.verify_if_exists(
+                conn, "SELECT 1 FROM categories WHERE name = ?", category_name
+            )
 
     def add_category(self, category_name, user_id):
         """
@@ -321,8 +333,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT username FROM users')
-                users = [row[0] for row in cursor.fetchall()]
-                return users
+                return [row[0] for row in cursor.fetchall()]
         except sqlite3.DatabaseError as e:
             # Handles database-specific errors with logging for troubleshooting
             logging.error(f"Database error: {e}")
@@ -350,8 +361,7 @@ class TaskManager:
                 query = "SELECT name, username, email, password, salt FROM users WHERE id = ?"
                 cursor.execute(query, (user_id,))
 
-                user_data = cursor.fetchone()
-                if user_data:
+                if user_data := cursor.fetchone():
                     return {
                         "name": user_data[0],
                         "username": user_data[1],
@@ -403,9 +413,7 @@ class TaskManager:
             with self.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT id, password, salt FROM users WHERE username = ?", (username,))
-                stored_data = cursor.fetchone()
-
-                if stored_data:
+                if stored_data := cursor.fetchone():
                     user_id, stored_hashed_password, salt = stored_data
                     hashed_password, _ = hash_password(password, salt)
 
@@ -420,12 +428,28 @@ class TaskManager:
         """Checks if a username already exists in the database."""
         try:
             with self.get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT 1 FROM users WHERE username = ?", (username,))
-                return cursor.fetchone() is not None
+                return self.verify_if_exists(
+                    conn, "SELECT 1 FROM users WHERE username = ?", username
+                )
         except sqlite3.Error as e:
             logging.error(f"Database error in username_exists: {e}")
             return False  # In case of an error, safely return False
+
+    def verify_if_exists(self, conn, query, param):
+        """
+        Verifies if a record exists in the database.
+
+        Args:
+            conn: The database connection object.
+            query: The SQL query to execute.
+            param: The parameter value for the query.
+
+        Returns:
+            bool: True if a record exists, False otherwise.
+        """
+        cursor = conn.cursor()
+        cursor.execute(query, (param, ))
+        return cursor.fetchone() is not None
 
     def update_user_profile(self, user_id, name, username, email):
         """
@@ -654,8 +678,7 @@ class TaskManager:
             # Define a REGEXP function for regex searches
             if use_regex:
                 def regexp(expr, item):
-                    reg = re.compile(
-                        expr, re.IGNORECASE if not match_case else 0)
+                    reg = re.compile(expr, re.IGNORECASE if not match_case else 0)
                     return reg.search(item) is not None
                 conn.create_function("REGEXP", 2, regexp)
                 query = '''
@@ -668,7 +691,11 @@ class TaskManager:
             else:
                 like_clause = f"%{text}%"
                 case_clause = "COLLATE RTRIM" if match_case else ""
-                whole_word_clause = f"(t.name LIKE ? OR t.name LIKE ? OR t.name LIKE ? OR t.name = ?)" if whole_word else "t.name LIKE ?"
+                whole_word_clause = (
+                    "(t.name LIKE ? OR t.name LIKE ? OR t.name LIKE ? OR t.name = ?)"
+                    if whole_word
+                    else "t.name LIKE ?"
+                )
                 query = f'''
                     SELECT t.id, t.name, t.due_date, t.priority, t.category, t.status, p.color
                     FROM tasks t
@@ -714,18 +741,22 @@ class TaskManager:
         today = datetime.date.today().strftime("%Y-%m-%d")
         try:
             with self.get_db_connection() as conn:
-                cursor = conn.cursor()
-                query = "SELECT name FROM tasks WHERE due_date = ? AND status = ?"
-                cursor.execute(query, (today, STATUS_ACTIVE)) # '1' is the value indicating an active task
-                tasks = [row[0] for row in cursor.fetchall()] # Fetch all rows and extract the task names
-                logging.info(f"Tasks due today: {tasks}")
-                return tasks
+                return self._extracted_from_get_due_tasks_12(conn, today)
         except sqlite3.DatabaseError as e:
             logging.error(f"Database error: {e}")
             return []
         except Exception as e:
             logging.error(f"An error occurred: {e}")
             return []
+
+    # TODO Rename this here and in `get_due_tasks`
+    def _extracted_from_get_due_tasks_12(self, conn, today):
+        cursor = conn.cursor()
+        query = "SELECT name FROM tasks WHERE due_date = ? AND status = ?"
+        cursor.execute(query, (today, STATUS_ACTIVE)) # '1' is the value indicating an active task
+        tasks = [row[0] for row in cursor.fetchall()] # Fetch all rows and extract the task names
+        logging.info(f"Tasks due today: {tasks}")
+        return tasks
 
     def export_tasks(self, file_path, user_id):
         """
@@ -773,7 +804,7 @@ class TaskManager:
                     for row in reader:
                         # Ensure each row has the required number of elements
                         if len(row) >= 5:
-                            task_name, due_date, priority, category = row[0:4]
+                            task_name, due_date, priority, category = row[:4]
 
                             # Validate the task name
                             if not is_valid_task_name(task_name):
@@ -821,7 +852,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 cursor.execute('SELECT key, value FROM preferences WHERE user_id = ?', (user_id,))
                 # Create a dictionary from the fetched preferences
-                return {key: value for key, value in cursor.fetchall()}
+                return dict(cursor.fetchall())
         except sqlite3.Error as e:
             return {}  # Returns an empty dictionary in case of an error
 
@@ -891,11 +922,8 @@ class TaskManager:
         category_data = [{'category': row[0], 'count': row[1]} for row in category_data]
         due_date = [{'due_date': row[0], 'count': row[1]} for row in due_date_data]
 
-        # Compile the analytics into a single dictionary
-        analytics = {
+        return {
             'status': status_data,
             'category': category_data,
-            'due_date': due_date
+            'due_date': due_date,
         }
-
-        return analytics

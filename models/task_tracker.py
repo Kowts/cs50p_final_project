@@ -37,8 +37,7 @@ class TaskTracker(QThread):
         while True:
             self.sleep(10) # Sleep for 10 seconds
             logging.info("Checking for due tasks...")
-            today_tasks = self.task_manager.get_due_tasks()
-            if today_tasks:
+            if today_tasks := self.task_manager.get_due_tasks():
                 self.notify_due_tasks.emit(today_tasks)
                 logging.info(f"Found {len(today_tasks)} due tasks.")
             else:

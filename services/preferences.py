@@ -155,13 +155,11 @@ class PreferencesManager(QObject):
             # Extract the numeric part of the font size (e.g., '12' from '12pt')
             size = int(font_size.replace('pt', ''))
 
-            # Check if the font size is within the acceptable range
             if min_font_size <= size <= max_font_size:
                 return font_size
-            else:
-                # If the size is outside the range, log a warning and return the default size
-                logging.warning(f"Font size {font_size} is out of range. Using default size {default_font_size}.")
-                return default_font_size
+            # If the size is outside the range, log a warning and return the default size
+            logging.warning(f"Font size {font_size} is out of range. Using default size {default_font_size}.")
+            return default_font_size
         except ValueError:
             # If the font size string cannot be converted to an integer, log an error and return the default size
             logging.error(f"Invalid font size format: {font_size}. Using default size {default_font_size}.")

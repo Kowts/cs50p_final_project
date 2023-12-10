@@ -41,8 +41,7 @@ def get_db_connection(db_file):
         sqlite3.Error: If a connection error occurs.
     """
     try:
-        conn = sqlite3.connect(db_file)
-        return conn
+        return sqlite3.connect(db_file)
     except sqlite3.OperationalError as e:
         logging.error(f"Operational error in database connection: {e}")
         raise
